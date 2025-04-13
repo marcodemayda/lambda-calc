@@ -25,12 +25,13 @@ prettyPrePrint (L x m) =   "(\\" ++ show x ++ ". " ++ prettyPrePrint m ++ ")"
 prettyPrePrint2 :: LambdaPreTerm -> String
 prettyPrePrint2 (V x) = show x
 prettyPrePrint2 (A m n) = "(" ++ prettyPrePrint m ++ " " ++ prettyPrePrint n ++ ")"
-prettyPrePrint2 (L x m) =   "(\xce\xbb\x20" ++ show x ++ ". " ++ prettyPrePrint m ++ ")"
+prettyPrePrint2 (L x m) =   "(\x03bb" ++ show x ++ ". " ++ prettyPrePrint m ++ ")"
 
 prettierPrePrint :: LambdaPreTerm -> IO ()
-prettierPrePrint = putStrLn . prettyPrePrint2
+prettierPrePrint term = do
+  hSetEncoding stdout utf8
+  putStrLn $ prettyPrePrint2 term
 
-f = hSetEncoding stdout utf8
 -- prettierPrePrint (L 3 (V 3))
 
 
