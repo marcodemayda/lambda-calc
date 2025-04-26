@@ -39,6 +39,13 @@ freePreVars (A m n) = nub $ freePreVars m ++ freePreVars n
 checkFreePreVar :: Var -> LambdaPreTerm -> Bool
 checkFreePreVar x n = x `elem` freePreVars n
 
+freshPreVar :: LambdaPreTerm -> Var
+freshPreVar m = head $ variables \\ freePreVars m
+
+
+lambdaVec :: [Var] -> LambdaPreTerm -> LambdaPreTerm
+lambdaVec xs m = foldr L m xs
+
 
 -- substitution for Pre-terms, read "Pre-term with Var substituted for Pre-term"
 substPreTerm :: LambdaPreTerm -> Var -> LambdaPreTerm -> Maybe LambdaPreTerm
@@ -59,7 +66,6 @@ substPreTerm (L y p) x n
 
 prettyPreSub :: LambdaPreTerm -> Var -> LambdaPreTerm -> IO ()
 prettyPreSub m x n = prettierPrePrint $ fromJust $ substPreTerm m x n
-
 
 -- alpha conevrt Term with Variable
 alphaConv :: LambdaPreTerm -> Var -> Maybe LambdaPreTerm
@@ -117,6 +123,8 @@ freeVars (T m)= freePreVars m
 checkFreeVar :: Var -> LambdaTerm -> Bool
 checkFreeVar x (T m) = x `elem` freePreVars m
 
+freshVar :: LambdaTerm -> Var
+freshVar m = head $ variables \\ freeVars m
 
 
 -- again read "Term with Variable substituted for Term"
@@ -177,9 +185,6 @@ subPreTerms (L x m) = L x m : subPreTerms m
 subTerms :: LambdaTerm -> [LambdaTerm]
 subTerms (T m) = map T (subPreTerms m)
 
-
-
-
 preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
@@ -209,20 +214,3 @@ substForPreTerm (L x s) (L y r) q
     | L x s == L y r                    = q
     | L y r `elem` subPreTerms (L x s)  = L x (substForPreTerm s (L y r) q)
     | otherwise                         = L x s
-
-
-
-
-
-myTerm10 :: LambdaPreTerm
-myTerm10 = A (A (V 1) (V 3)) (L 3 (A (V 4) (V 1)))
-
-mySubterm :: LambdaPreTerm
-mySubterm = A (V 1) (V 3)
-
-myTerm1 :: LambdaPreTerm
-myTerm1 = L 1 (V 2)
-
-
--- >>>substForPreTerm myTerm10 mySubterm myTerm1
--- A (L 1 (V 2)) (L 3 (A (V 4) (V 1)))
