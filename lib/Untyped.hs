@@ -1,11 +1,11 @@
-{-# HLINT ignore "Avoid lambda" #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
-{-# HLINT ignore "Redundant case" #-}
+{-# HLINT ignore "Avoid lambda" #-}
+
 module Untyped where
 
 
 import PreTerms
-import Control.Monad.State
 
 ---------- BEGINNINGS ----------
 
@@ -18,12 +18,12 @@ checkbetaRedex (T (A m _)) = case m of
 
 
 checkBetaNF :: LambdaTerm -> Bool
-checkBetaNF m = all (\n -> contractRedex n == n) (subPreTerms $ preTer m)
+checkBetaNF (T m) = all (\n -> not $ checkbetaRedex n) (subTerms $ T m)
 
 
 contractRedex :: LambdaPreTerm -> LambdaPreTerm
-contractRedex ( (V m)) =  (V m)
-contractRedex ( (L x m)) =  (L x m)
+contractRedex ( (V m)) =  V m
+contractRedex ( (L x m)) =  L x m
 contractRedex ( (A m n)) = case m of
     L x m' ->   substPreTot m' x n
     _ -> A m n
@@ -44,20 +44,24 @@ innermostRedex = undefined
 betaReductionR :: LambdaTerm -> LambdaTerm
 betaReductionR (T m) = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
 
+
+--PROBLEM: looks down a branch but doesnt go back out for potentially better options
 outermostRedex :: LambdaTerm -> LambdaPreTerm
 outermostRedex (T m)
     | checkbetaRedex (T m) = m
     | otherwise = case m of
         (V x) -> V x
         A n r
-            | checkbetaRedex$ T n -> outermostRedex$ T n
-            | otherwise -> outermostRedex$ T r
+            | checkbetaRedex $ T r -> r
+            | checkbetaRedex $ T n -> n
+            | checkbetaRedex $ T $ outermostRedex $ T r -> outermostRedex $ T r
+            | otherwise -> outermostRedex $ T n
         L _ n -> outermostRedex$ T n
 
 
 
 betaReductionBoth ::LambdaTerm -> [LambdaTerm]
-betaReductionBoth m =  betaReductionL m : [betaReductionR m]
+betaReductionBoth m =  betaReductionR m : [betaReductionR m]
 
 -- "transitive" closure as beta-reduction repeated n-times
 betaMultiReductionL :: LambdaTerm -> Integer -> LambdaTerm
@@ -90,6 +94,13 @@ betaEq m n =
     any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..20] ||
     any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..20]) [0..20]
 
+betaEqFor :: LambdaTerm -> LambdaTerm -> Integer ->  Bool
+betaEqFor m n a =
+    m == n ||
+    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..a] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..a] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..a]) [0..a]
+
 
 etaReduce :: LambdaTerm -> LambdaTerm
 etaReduce (T m) = case m of
@@ -99,7 +110,7 @@ etaReduce (T m) = case m of
 
 
 betaEtaRed :: LambdaTerm -> LambdaTerm
-betaEtaRed = betaReductionL . etaReduce
+betaEtaRed = betaReductionR . etaReduce
 
 betaEtaMultiRed :: LambdaTerm -> Integer -> LambdaTerm
 betaEtaMultiRed m 0 = m
@@ -117,8 +128,8 @@ extEq = betaEtaEq
 
 betaParReduction :: LambdaTerm -> LambdaTerm
 betaParReduction (T m) = case m of
-    (V x) -> betaReductionL$ T$ V x
-    (A n r) -> T$ A (preTer $ betaReductionL (T n)) (preTer $ betaReductionL (T r))
+    (V x) -> betaReductionR$ T$ V x
+    (A n r) -> T$ A (preTer $ betaReductionR (T n)) (preTer $ betaReductionR (T r))
     (L x n) -> case n of
         _ -> undefined
 
@@ -127,7 +138,13 @@ completeDevelop = undefined
 
 
 checkNormalizingInf :: LambdaTerm -> Bool
-checkNormalizingInf m = any (\x -> checkBetaNF$ betaMultiReductionL m x) [0..]
+checkNormalizingInf m 
+    | checkBetaNF m = True 
+    | otherwise = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..]
 
 checkNormalizing :: LambdaTerm -> Bool
-checkNormalizing m = any (\x -> checkBetaNF$ betaMultiReductionL m x) [0..20]
+checkNormalizing m = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..20]
+
+checkNormalizingFor :: LambdaTerm -> Integer -> Bool
+checkNormalizingFor m a = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..a]
+

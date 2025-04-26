@@ -184,30 +184,31 @@ preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
 
-
+-- NOTE: This might still need some work, it functions in "sane" cases, but i'm not sure it works generally
+--potential problems: multiple instances of a sub-term; 
 -- change an entire sub-term. read "Term M with sub-term p substituted for Term q".
 substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
 substForPreTerm m (V x) q = substPreTot m x q
 
-substForPreTerm (V x) (A _ _) _  = V x
+substForPreTerm (V x) (A _ _) _         = V x
 substForPreTerm (A j k) (A p r) q
-    |  A j k == A p r            = q
-    | A p r `elem` subPreTerms j = A (substForPreTerm j (A p r) q) k
-    | A p r `elem` subPreTerms k = A j (substForPreTerm k (A p r) q)
-    | otherwise                  = A j k
+    | A j k == A p r                    = q
+    | A p r `elem` subPreTerms j        = A (substForPreTerm j (A p r) q) k
+    | A p r `elem` subPreTerms k        = A j (substForPreTerm k (A p r) q)
+    | otherwise                         = A j k
 substForPreTerm (L x k) (A p r) q 
-    | A p r `elem` subPreTerms k = L x (substForPreTerm k (A p r) q)
-    | otherwise                  = L x k
+    | A p r `elem` subPreTerms k        = L x (substForPreTerm k (A p r) q)
+    | otherwise                         = L x k
 
-substForPreTerm (V x) (L _ _) _   = V x
+substForPreTerm (V x) (L _ _) _         = V x
 substForPreTerm (A j k) (L y r) q 
-    | L y r `elem` subPreTerms j  = A (substForPreTerm j (L y r) q) k
-    | L y r `elem` subPreTerms k  = A j (substForPreTerm k (L y r) q) 
-    | otherwise                   = A j k
+    | L y r `elem` subPreTerms j        = A (substForPreTerm j (L y r) q) k
+    | L y r `elem` subPreTerms k        = A j (substForPreTerm k (L y r) q) 
+    | otherwise                         = A j k
 substForPreTerm (L x s) (L y r) q
-    |  L x s == L y r = q
-    |  L y r `elem` subPreTerms (L x s) = L x (substForPreTerm s (L y r) q)
-    | otherwise = L x s
+    | L x s == L y r                    = q
+    | L y r `elem` subPreTerms (L x s)  = L x (substForPreTerm s (L y r) q)
+    | otherwise                         = L x s
 
 
 
