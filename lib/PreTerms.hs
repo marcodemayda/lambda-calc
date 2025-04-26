@@ -179,26 +179,49 @@ subTerms (T m) = map T (subPreTerms m)
 
 
 
+
 preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
 
 
--- change an entire sub-term. read "Term with sub-term p substituted for Term q".
--- substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaTerm
--- substForPreTerm (V x) p q
---     | (V x) == p = q 
---     | otherwise = (V x)
+-- change an entire sub-term. read "Term M with sub-term p substituted for Term q".
+substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
+substForPreTerm m (V x) q = substPreTot m x q
+
+substForPreTerm (V x) (A _ _) _  = V x
+substForPreTerm (A j k) (A p r) q
+    |  A j k == A p r            = q
+    | A p r `elem` subPreTerms j = A (substForPreTerm j (A p r) q) k
+    | A p r `elem` subPreTerms k = A j (substForPreTerm k (A p r) q)
+    | otherwise                  = A j k
+substForPreTerm (L x k) (A p r) q 
+    | A p r `elem` subPreTerms k = L x (substForPreTerm k (A p r) q)
+    | otherwise                  = L x k
+
+substForPreTerm (V x) (L _ _) _   = V x
+substForPreTerm (A j k) (L y r) q 
+    | L y r `elem` subPreTerms j  = A (substForPreTerm j (L y r) q) k
+    | L y r `elem` subPreTerms k  = A j (substForPreTerm k (L y r) q) 
+    | otherwise                   = A j k
+substForPreTerm (L x s) (L y r) q
+    |  L x s == L y r = q
+    |  L y r `elem` subPreTerms (L x s) = L x (substForPreTerm s (L y r) q)
+    | otherwise = L x s
 
 
--- substForTerm (A m n) p q 
---     | p `elem` substPreTerm (A m n) = (A m n) 
---     | otherwise = (A m n)
-
--- substForTerm (L x m) p q 
---     | p `elem` substPreTerm (L x m) = undefined
---     | otherwise = (A m n)
 
 
-    -- | T x `elem` subPreTerms m = case 
-    -- | otherwise = m
+
+myTerm10 :: LambdaPreTerm
+myTerm10 = A (A (V 1) (V 3)) (L 3 (A (V 4) (V 1)))
+
+mySubterm :: LambdaPreTerm
+mySubterm = (A (V 1) (V 3))
+
+myTerm1 :: LambdaPreTerm
+myTerm1 = (L 1 (V 2))
+
+
+-- >>>substForPreTerm myTerm10 mySubterm myTerm1
+-- A (L 1 (V 2)) (L 3 (A (V 4) (V 1)))

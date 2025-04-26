@@ -18,37 +18,37 @@ checkbetaRedex (T (A m _)) = case m of
 
 
 checkBetaNF :: LambdaTerm -> Bool
-checkBetaNF m = all (\n -> contractRedex n == n) (subTerms m)
+checkBetaNF m = all (\n -> contractRedex n == n) (subPreTerms $ preTer m)
 
 
-contractRedex :: LambdaTerm -> LambdaTerm
-contractRedex (T (V m)) = T (V m)
-contractRedex (T (L x m)) = T (L x m)
-contractRedex (T (A m n)) = case m of
-    L x m' ->  T$ substPreTot m' x n
-    _ -> T$ A m n
+contractRedex :: LambdaPreTerm -> LambdaPreTerm
+contractRedex ( (V m)) =  (V m)
+contractRedex ( (L x m)) =  (L x m)
+contractRedex ( (A m n)) = case m of
+    L x m' ->   substPreTot m' x n
+    _ -> A m n
 
 
 
 
 -- beta-reduction with innermost-first strategy
 betaReductionL :: LambdaTerm -> LambdaTerm
-betaReductionL = contractRedex . innermostRedex
+betaReductionL = T . contractRedex . innermostRedex
 
-
-innermostRedex :: LambdaTerm -> LambdaTerm
+innermostRedex :: LambdaTerm -> LambdaPreTerm
 innermostRedex = undefined
+
 
 
 -- beta-reduction with outermost-first strategy
 betaReductionR :: LambdaTerm -> LambdaTerm
-betaReductionR (T m) = contractRedex $ outermostRedex (T m)
+betaReductionR (T m) = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
 
-outermostRedex :: LambdaTerm -> LambdaTerm
+outermostRedex :: LambdaTerm -> LambdaPreTerm
 outermostRedex (T m)
-    | checkbetaRedex (T m) = T m
+    | checkbetaRedex (T m) = m
     | otherwise = case m of
-        (V x) -> T$ V x
+        (V x) -> V x
         A n r
             | checkbetaRedex$ T n -> outermostRedex$ T n
             | otherwise -> outermostRedex$ T r

@@ -27,9 +27,42 @@ combiY = T$ L 7 (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))
 
 
 
-myTerm4 :: LambdaTerm
-myTerm4 = T$ A (preTer combiOm) (V 3)
+-- >>> prettyPrint$ combiY
+-- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
+
+-- >>>  prettyPrePrint $ outermostRedex $ combiY
+-- "((\\1. (7 (1 1))) (\\1. (7 (1 1))))"
+
+-- >>> prettyPrePrint $  contractRedex $ outermostRedex $ combiY
+-- "(7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
+
+
+mySub :: LambdaPreTerm
+mySub = substForPreTerm (preTer combiY) (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))))) (A (V 7) (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))))))
+
+-- >>>prettyPrePrint $ mySub
+-- "(\\7. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
+
+
+-- >>> prettyPrint $ betaReductionR $ combiY
+-- "(\\7. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
+
+
+-- >>> prettyPrint$ betaReductionR $ betaReductionR $ combiY
+-- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
+
+
+-- >>> prettyPrint$ betaReductionR $ betaReductionR $ betaReductionR $ combiY
+-- "(\\7. (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))"
 
 
 
+-- >>> prettyPrint $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ combiY
+-- "(\\7. (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))))"
 
+
+-- >>> prettyPrint $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ combiY
+-- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
+
+
+--LETS FUCKING GO!!
