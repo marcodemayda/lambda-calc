@@ -60,6 +60,22 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 -- >>> betaReductionR $ betaReductionR $ betaReductionR twoRedex
 -- T (L 3 (V 3))
 
+-- >>>betaReductionPar twoRedex
+-- T (A (L 3 (V 3)) (L 3 (V 3)))
+
+-- >>>betaReductionPar$ betaReductionPar twoRedex
+-- T (L 3 (V 3))
+
+-- >>> completeDevelopInf (bigTerm 100)
+-- T (L 1 (V 1))
+
+
+hiddenRed :: LambdaTerm
+hiddenRed =  T (A (L 1 (V 1)) (V 2)) 
+
+-- >>>betaReductionL hiddenRed
+-- T (V 2)
+
 -- LOOPING combiY
 -- >>> prettyPrint$ combiY
 -- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"

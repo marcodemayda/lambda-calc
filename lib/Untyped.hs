@@ -1,7 +1,5 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
 {-# HLINT ignore "Avoid lambda" #-}
-
 module Untyped where
 
 
@@ -33,13 +31,13 @@ contractRedex ( (A m n)) = case m of
 
 -- beta-reduction with innermost-first strategy
 betaReductionL :: LambdaTerm -> LambdaTerm
-betaReductionL (T m) 
+betaReductionL (T m)
     | checkBetaNF (T m) = T m
     | otherwise = T $ substForPreTerm m (innermostRedex (T m)) (contractRedex $ innermostRedex (T m))
 
 innermostRedex :: LambdaTerm -> LambdaPreTerm
 innermostRedex (T (V x)) = V x
-innermostRedex (T (A m n)) 
+innermostRedex (T (A m n))
     | not $ checkBetaNF (T m) = case m of
         V x -> V x
         A p q -> innermostRedex $ T $ A p q
@@ -55,7 +53,7 @@ innermostRedex (T (L x m))
 
 -- beta-reduction with outermost-first strategy
 betaReductionR :: LambdaTerm -> LambdaTerm
-betaReductionR (T m) 
+betaReductionR (T m)
     | checkBetaNF (T m) = T m
     | otherwise = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
 
@@ -117,6 +115,7 @@ betaEqFor m n a =
     any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..a]) [0..a]
 
 
+
 etaReduce :: LambdaTerm -> LambdaTerm
 etaReduce (T m) = case m of
     L x (A m' (V y)) | x == y && checkFreePreVar x m' -> T m'
@@ -135,26 +134,55 @@ betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 betaEtaEq :: LambdaTerm -> LambdaTerm -> Bool
 betaEtaEq m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..20]
 
+betaEtaEqInf :: LambdaTerm -> LambdaTerm -> Bool
+betaEtaEqInf m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..]
+
+betaEtaEqFor:: LambdaTerm -> LambdaTerm -> Integer -> Bool
+betaEtaEqFor m n a =  any (\x -> betaEtaMultiRed m x == n ) [0..a] || any (\x -> betaEtaMultiRed m x == n ) [0..a]
 
 
 extEq :: LambdaTerm -> LambdaTerm -> Bool
 extEq = betaEtaEq
 
+extEqInf :: LambdaTerm -> LambdaTerm -> Bool
+extEqInf = betaEtaEqInf
 
-betaParReduction :: LambdaTerm -> LambdaTerm
-betaParReduction (T m) = case m of
-    (V x) -> betaReductionR$ T$ V x
-    (A n r) -> T$ A (preTer $ betaReductionR (T n)) (preTer $ betaReductionR (T r))
-    (L x n) -> case n of
-        _ -> undefined
+extEqFor :: LambdaTerm -> LambdaTerm -> Integer -> Bool
+extEqFor = betaEtaEqFor
+
+
+
+betaReductionPar :: LambdaTerm -> LambdaTerm
+betaReductionPar (T (V x)) = betaReductionR $ T$ V x
+betaReductionPar (T (A n r)) = betaReductionR $ T $ A (preTer $ betaReductionR $ T n) (preTer $ betaReductionR $ T r)
+betaReductionPar(T (L x n)) = T $ L x (preTer $ betaReductionPar $ T n)
+
+betaMultiReductionPar :: LambdaTerm -> Integer -> LambdaTerm
+betaMultiReductionPar m 0 = m
+betaMultiReductionPar m n = betaReductionPar (betaMultiReductionPar m (n-1))
 
 completeDevelop :: LambdaTerm -> LambdaTerm
-completeDevelop = undefined
+completeDevelop m
+    | checkBetaNF $ betaMultiReductionPar m 20 = betaMultiReductionPar m 20
+    | otherwise = error "development is long"
+
+completeDevelopInf :: LambdaTerm -> LambdaTerm
+completeDevelopInf m =
+    let recursed = betaMultiReductionPar m 0
+    in if checkBetaNF m
+            then recursed
+            else  completeDevelopInf $ betaMultiReductionPar m 1
+
+completeDevelopFor :: LambdaTerm -> Integer -> LambdaTerm
+completeDevelopFor m a
+    | checkBetaNF $ betaMultiReductionPar m a = betaMultiReductionPar m a
+    | otherwise = error "takes longer than that to reduce"
+
 
 
 checkNormalizingInf :: LambdaTerm -> Bool
-checkNormalizingInf m 
-    | checkBetaNF m = True 
+checkNormalizingInf m
+    | checkBetaNF m = True
     | otherwise = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..]
 
 checkNormalizing :: LambdaTerm -> Bool
