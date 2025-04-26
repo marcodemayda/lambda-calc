@@ -1,5 +1,6 @@
-{-# HLINT ignore "Avoid lambda using `infix`" #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Avoid lambda using `infix`" #-}
 module Untyped where
 
 
@@ -73,6 +74,7 @@ outermostRedex (T m)
 
 
 
+-------- OTHER REDUCTIONS--------------
 betaReductionBoth ::LambdaTerm -> [LambdaTerm]
 betaReductionBoth m =  betaReductionR m : [betaReductionR m]
 
@@ -90,38 +92,10 @@ betaMultiReductionBoth :: LambdaTerm -> Integer -> [LambdaTerm]
 betaMultiReductionBoth m 0 =  [m]
 betaMultiReductionBoth m n =  betaReductionBoth m ++ betaMultiReductionBoth m (n-1)
 
-
--- basically, check if m == n, or if some reduction of one is == to the other, or if there's an equal r they both reduce to.
-betaEqInf :: LambdaTerm -> LambdaTerm -> Bool
-betaEqInf m n =
-    m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..]) [0..]
-
-
-betaEq :: LambdaTerm -> LambdaTerm -> Bool
-betaEq m n =
-    m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..20] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..20] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..20]) [0..20]
-
-betaEqFor :: LambdaTerm -> LambdaTerm -> Integer ->  Bool
-betaEqFor m n a =
-    m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..a] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..a] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..a]) [0..a]
-
-
-
 etaReduce :: LambdaTerm -> LambdaTerm
 etaReduce (T m) = case m of
     L x (A m' (V y)) | x == y && checkFreePreVar x m' -> T m'
     _ -> T m
-
-
 
 betaEtaRed :: LambdaTerm -> LambdaTerm
 betaEtaRed = betaReductionR . etaReduce
@@ -129,27 +103,6 @@ betaEtaRed = betaReductionR . etaReduce
 betaEtaMultiRed :: LambdaTerm -> Integer -> LambdaTerm
 betaEtaMultiRed m 0 = m
 betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
-
-
-betaEtaEq :: LambdaTerm -> LambdaTerm -> Bool
-betaEtaEq m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..20]
-
-betaEtaEqInf :: LambdaTerm -> LambdaTerm -> Bool
-betaEtaEqInf m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..]
-
-betaEtaEqFor:: LambdaTerm -> LambdaTerm -> Integer -> Bool
-betaEtaEqFor m n a =  any (\x -> betaEtaMultiRed m x == n ) [0..a] || any (\x -> betaEtaMultiRed m x == n ) [0..a]
-
-
-extEq :: LambdaTerm -> LambdaTerm -> Bool
-extEq = betaEtaEq
-
-extEqInf :: LambdaTerm -> LambdaTerm -> Bool
-extEqInf = betaEtaEqInf
-
-extEqFor :: LambdaTerm -> LambdaTerm -> Integer -> Bool
-extEqFor = betaEtaEqFor
-
 
 
 betaReductionPar :: LambdaTerm -> LambdaTerm
@@ -178,8 +131,52 @@ completeDevelopFor m a
     | checkBetaNF $ betaMultiReductionPar m a = betaMultiReductionPar m a
     | otherwise = error "takes longer than that to reduce"
 
+------------ EQUIVALENCES-------------------------
+
+-- basically, check if m == n, or if some reduction of one is == to the other, or if there's an equal r they both reduce to.
+betaEqInf :: LambdaTerm -> LambdaTerm -> Bool
+betaEqInf m n =
+    m == n ||
+    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..]) [0..]
 
 
+betaEq :: LambdaTerm -> LambdaTerm -> Bool
+betaEq m n =
+    m == n ||
+    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..20] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..20] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..20]) [0..20]
+
+betaEqFor :: LambdaTerm -> LambdaTerm -> Integer ->  Bool
+betaEqFor m n a =
+    m == n ||
+    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..a] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..a] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..a]) [0..a]
+
+
+betaEtaEq :: LambdaTerm -> LambdaTerm -> Bool
+betaEtaEq m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..20]
+
+betaEtaEqInf :: LambdaTerm -> LambdaTerm -> Bool
+betaEtaEqInf m n =  any (\x -> betaEtaMultiRed m x == n ) [0..20] || any (\x -> betaEtaMultiRed m x == n ) [0..]
+
+betaEtaEqFor:: LambdaTerm -> LambdaTerm -> Integer -> Bool
+betaEtaEqFor m n a =  any (\x -> betaEtaMultiRed m x == n ) [0..a] || any (\x -> betaEtaMultiRed m x == n ) [0..a]
+
+
+extEq :: LambdaTerm -> LambdaTerm -> Bool
+extEq = betaEtaEq
+
+extEqInf :: LambdaTerm -> LambdaTerm -> Bool
+extEqInf = betaEtaEqInf
+
+extEqFor :: LambdaTerm -> LambdaTerm -> Integer -> Bool
+extEqFor = betaEtaEqFor
+
+------------- NORMALIZATIONS
 checkNormalizingInf :: LambdaTerm -> Bool
 checkNormalizingInf m
     | checkBetaNF m = True
