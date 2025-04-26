@@ -33,16 +33,31 @@ contractRedex ( (A m n)) = case m of
 
 -- beta-reduction with innermost-first strategy
 betaReductionL :: LambdaTerm -> LambdaTerm
-betaReductionL = T . contractRedex . innermostRedex
+betaReductionL (T m) 
+    | checkBetaNF (T m) = T m
+    | otherwise = T $ substForPreTerm m (innermostRedex (T m)) (contractRedex $ innermostRedex (T m))
 
 innermostRedex :: LambdaTerm -> LambdaPreTerm
-innermostRedex = undefined
+innermostRedex (T (V x)) = V x
+innermostRedex (T (A m n)) 
+    | not $ checkBetaNF (T m) = case m of
+        V x -> V x
+        A p q -> innermostRedex $ T $ A p q
+        L _ _ ->  A m n
+    | not $ checkBetaNF (T n) = innermostRedex $ T n
+    | otherwise = A m n
+
+innermostRedex (T (L x m))
+    | not $ checkBetaNF (T m) = innermostRedex $ T m
+    | otherwise = L x m
 
 
 
 -- beta-reduction with outermost-first strategy
 betaReductionR :: LambdaTerm -> LambdaTerm
-betaReductionR (T m) = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
+betaReductionR (T m) 
+    | checkBetaNF (T m) = T m
+    | otherwise = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
 
 
 --PROBLEM: looks down a branch but doesnt go back out for potentially better options
