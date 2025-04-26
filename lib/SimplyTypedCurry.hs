@@ -53,7 +53,12 @@ checkInferVAR (ga, (la, t)) = any (\(x,y) -> (T(V x),y) == (la,t)) ga
 
 
 checkInferABS :: Judgment -> Judgment -> Bool
-checkInferABS j i = undefined
+checkInferABS (ga1, (la1,t1)) (ga2, (la2,t2)) = case t2 of
+    To si ta ->    True
+                && t1 == si && t2 == ta
+                && la2 == T (L (V 1))
+    _ -> False
+    
 
 checkInferAPP :: Judgment -> Judgment -> Judgment ->  Bool
 checkInferAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) =
