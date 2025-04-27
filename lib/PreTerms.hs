@@ -46,6 +46,11 @@ freshPreVar m = head $ variables \\ freePreVars m
 lambdaVec :: [Var] -> LambdaPreTerm -> LambdaPreTerm
 lambdaVec xs m = foldr L m xs
 
+variablesPreOf :: LambdaPreTerm -> [Var]
+variablesPreOf (V x) = [x]
+variablesPreOf (A m n) = variablesPreOf m ++ variablesPreOf n
+variablesPreOf (L _ m) = variablesPreOf m
+
 
 -- substitution for Pre-terms, read "Pre-term with Var substituted for Pre-term"
 substPreTerm :: LambdaPreTerm -> Var -> LambdaPreTerm -> Maybe LambdaPreTerm
