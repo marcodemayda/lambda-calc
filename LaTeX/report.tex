@@ -1,5 +1,6 @@
 \documentclass[12pt,a4paper]{article}
 \input{latexmacros.tex}
+\microtypesetup{expansion=false}
 
 \title{My Report}
 \author{Me}
@@ -28,16 +29,16 @@ We use the listings package to typeset Haskell source code nicely.
 
 \input{Howto.tex}
 
-\input{lib/Basics.lhs}
+% \input{../lib/Basics.lhs}
 
-\input{exec/Main.lhs}
+\input{../exec/Main.lhs}
 
-\input{test/simpletests.lhs}
+% \input{../test/simpletests.lhs}
 
 \input{Conclusion.tex}
 
 \addcontentsline{toc}{section}{Bibliography}
 \bibliographystyle{alpha}
-\bibliography{references.bib}
+\bibliography{refesrences.bib}
 
 \end{document}

@@ -1,10 +1,5 @@
+\begin{code}
 module Main where
-
-import PreTerms
-import Untyped
- 
-import Parser
-
 
 main :: IO ( )
 main = putStrLn "Hello, no menu yet, sorry!"
@@ -28,3 +23,4 @@ We can run this program with the commands:
 stack build
 stack exec myprogram
 -}
+\end{code}
