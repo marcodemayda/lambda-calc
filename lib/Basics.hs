@@ -6,6 +6,10 @@ import Untyped
 
 
 
+--------------------
+-- COMBINATORS
+--------------------
+
 combiId :: LambdaTerm
 combiId = T$ L 1 (V 1)
 
@@ -26,6 +30,61 @@ combiY = T$ L 7 (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))
 
 
 
+--------------------
+-- ENCODING FUNCTIONS
+--------------------
+
+
+
+verum :: LambdaTerm
+verum = T $ L 1 (L 2 (V 1))
+
+falsum :: LambdaTerm
+falsum = T $ L 1 (L 2 (V 2))
+
+
+ifThenElse :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaTerm
+ifThenElse p q r = T $ A p (A q r)
+
+
+
+pair :: LambdaPreTerm -> LambdaPreTerm -> LambdaTerm
+pair m n = T $ L 1 (A (V 1) (A m n))
+
+pi1 :: LambdaPreTerm
+pi1 = L 9 (A (V 9) (preTer verum))
+
+pi2 :: LambdaPreTerm
+pi2 =  L 9 (A (V 9) (preTer falsum))
+
+pi1App :: LambdaPreTerm -> LambdaPreTerm
+pi1App = A pi1
+
+pi2App :: LambdaPreTerm -> LambdaPreTerm
+pi2App = A pi2
+
+
+-- apply m to n x-many times
+repeatApplication ::  LambdaPreTerm -> LambdaPreTerm -> Integer -> LambdaPreTerm
+repeatApplication m n 0 = A m n
+repeatApplication m n x = A m (repeatApplication m n (x-1))
+
+churchNumeral :: Integer -> LambdaTerm
+churchNumeral 0 = T$ L 0 $ L 1 (V 1)
+churchNumeral n = T$ L 0 $ L 1 (repeatApplication (V 7) (V 1) (n-1))
+
+
+-- suc :: LambdaPreTerm
+-- suc = L 4 $ L 7 $ L 1 (A (V 7) (A (V 4) (A (V 7) (V 1))))
+
+-- succApp :: LambdaPreTerm -> LambdaPreTerm
+-- succApp = A suc
+
+-- add :: LambdaPreTerm
+-- add = L 4 $ L 5 $ L 7 $ L 1 (A (V 5) (A (V 7) (A (V 4) (A (V 7) (V 1)))))
+
+-- addApp :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
+-- addApp m n = A add (A m n)
 
 --------------------
 -- TESTS
@@ -71,7 +130,7 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 
 hiddenRed :: LambdaTerm
-hiddenRed =  T (A (L 1 (V 1)) (V 2)) 
+hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 -- >>>betaReductionL hiddenRed
 -- T (V 2)
@@ -95,3 +154,9 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 -- >>> prettyPrint $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ combiY
 -- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
 --LETS FUCKING GO!!
+
+
+--------------
+-- >>> prettyPrint $ churchNumeral 5
+-- "(\\7. (\\1. (7 (7 (7 (7 (7 1)))))))"
+
