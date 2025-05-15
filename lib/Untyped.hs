@@ -113,6 +113,7 @@ etaReduce (T m) = case m of
     L x (A m' (V y)) | x == y && checkFreePreVar x m' -> T m'
     _ -> T m
 
+-- Default to ReductionL because reasons.
 betaEtaRed :: LambdaTerm -> LambdaTerm
 betaEtaRed = betaReductionL . etaReduce
 
@@ -124,9 +125,10 @@ betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 betaReductionPar :: LambdaTerm -> LambdaTerm
 betaReductionPar = undefined
 
+
 betaMultiReductionPar :: LambdaTerm -> Integer -> LambdaTerm
 betaMultiReductionPar m 0 = m
-betaMultiReductionPar m n = betaReductionL (betaMultiReductionL m (n-1))
+betaMultiReductionPar m n = betaReductionPar (betaMultiReductionPar m (n-1))
 
 
 -- By sectoin 1.7 left-strategy is normalizing. Might change to parallel to make more efficient though.

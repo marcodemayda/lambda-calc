@@ -203,11 +203,10 @@ preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
 -- NOTE: This might still need some work, it functions in "sane" cases, but i'm not sure it works generally
---potential problems: multiple instances of a sub-term; 
--- Update: should be ok so long as it is fed a term that is unqiely identified, such as innermostRedex or the like, which is what I use it for anyways.
+--potential problems: multiple instances of a sub-term;  Update: should be ok so long as it is fed a term that is unqiely identified, such as innermostRedex or the like, which is what I use it for anyways.
+-- New Problem: i should account for variable capture with alpha-conversion...
 
 -- change an entire sub-term. read "preTerm M with sub-term p substituted for preTerm q".
-
 
 substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
 substForPreTerm m (V x) q = substPreTerm m x q
