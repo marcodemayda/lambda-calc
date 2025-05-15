@@ -37,11 +37,14 @@ bigTerm n = T$ foldl1 A (replicate n (preTer combiId) ++ [preTer combiId])
 myCheck :: Bool
 myCheck = checkNormalizingInf (bigTerm 100)
 
+-- >>> myCheck
+-- True
+
 myReduction :: LambdaTerm
-myReduction = betaMultiReductionR (bigTerm 100) 98
+myReduction = betaMultiReductionI (bigTerm 100) 98
 
 -- >>> prettyPrint$ myReduction
--- Maybe.fromJust: Nothing
+-- "(((\\1. 1) (\\1. 1)) (\\1. 1))"
 
 twoRedex :: LambdaTerm
 twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
@@ -53,30 +56,22 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 -- >>> betaReductionL $ betaReductionL $ betaReductionL twoRedex
 -- T (L 3 (V 3))
 
--- >>> betaReductionR twoRedex
--- Variable not in scope:
---   betaReductionR :: LambdaTerm -> t_aaBgG[sk:1]
--- >>> betaReductionR $ betaReductionR twoRedex
--- Variable not in scope:
---   betaReductionR :: a0_aaBiY[tau:1] -> b_aaBiZ[sk:1]
--- Variable not in scope:
---   betaReductionR :: LambdaTerm -> a0_aaBiY[tau:1]
--- >>> betaReductionR $ betaReductionR $ betaReductionR twoRedex
--- Variable not in scope:
---   betaReductionR :: a1_aaBly[tau:1] -> b_aaBlz[sk:1]
--- Variable not in scope:
---   betaReductionR :: a0_aaBlC[tau:1] -> a1_aaBly[tau:1]
--- Variable not in scope:
---   betaReductionR :: LambdaTerm -> a0_aaBlC[tau:1]
+-- >>> betaReductionI twoRedex
+-- T (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
+-- >>> betaReductionI $ betaReductionI twoRedex
+-- T (A (L 3 (V 3)) (L 3 (V 3)))
+-- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
+-- T (L 3 (V 3))
 
 -- >>>betaReductionPar twoRedex
--- T (A (L 3 (V 3)) (L 3 (V 3)))
+-- Prelude.undefined
 
 -- >>>betaReductionPar$ betaReductionPar twoRedex
--- T (L 3 (V 3))
+-- Prelude.undefined
 
 
 -- >>> completeDevelopInf (bigTerm 100)
+-- Prelude.undefined
 
 
 
@@ -90,19 +85,17 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 -- >>> prettyPrint$ combiY
 -- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
 
-
 -- >>> prettyPrint $ betaReductionL $ combiY
 -- "(\\7. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
-
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ combiY
 -- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
+-- "(\\7. (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
+-- "(\\7. (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
+-- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
