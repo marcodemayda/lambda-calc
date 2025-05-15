@@ -70,10 +70,6 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 -- >>>betaReductionPar$ betaReductionPar twoRedex
 -- T (L 3 (V 3))
 
-
--- >>> betaMultiReductionPar (bigTerm 100) 
--- T (A (L 1 (V 1)) (L 1 (V 1)))
-
 -- >>> completeDevelopInf (bigTerm 100)
 -- T (L 1 (V 1))
 
