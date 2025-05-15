@@ -3,6 +3,7 @@ module Basics where
 import PreTerms
 import Untyped
 
+import Data.Maybe
 
 
 
@@ -65,10 +66,10 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 
 -- >>>betaReductionPar twoRedex
--- T (A (L 3 (V 3)) (L 3 (V 3)))
+-- T (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 -- >>>betaReductionPar$ betaReductionPar twoRedex
--- T (L 3 (V 3))
+-- T (A (L 3 (V 3)) (L 3 (V 3)))
 
 -- >>> completeDevelopInf (bigTerm 100)
 -- T (L 1 (V 1))
@@ -102,5 +103,31 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 
 parallelTest = T$ A (preTer combiOm) (A (preTer combiId) (preTer combiId))
+
+--Now it's correct! 
+
+-- >>> prettyPrint parallelTest
+-- "((\\1. (1 1)) ((\\1. 1) (\\1. 1)))"
+
+
+-- >>> prettyPrint $ (betaMultiReductionI parallelTest 1)
+-- "((\\1. (1 1)) (\\1. 1))"
+-- >>> prettyPrint $ (betaMultiReductionI parallelTest 2)
+-- "((\\1. 1) (\\1. 1))"
+
+
+-- >>> prettyPrint $ (betaMultiReductionL parallelTest 1)
+-- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
+-- >>> prettyPrint $ (betaMultiReductionL parallelTest 2)
+-- "((\\1. 1) ((\\1. 1) (\\1. 1)))"
+-- >>> prettyPrint $ (betaMultiReductionL parallelTest 3)
+-- "((\\1. 1) (\\1. 1))"
+
+
+-- >>> prettyPrint $ (betaMultiReductionPar parallelTest 1)
+-- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
+-- >>> prettyPrint $ (betaMultiReductionPar parallelTest 2)
+-- "((\\1. 1) (\\1. 1))"
+
 
 

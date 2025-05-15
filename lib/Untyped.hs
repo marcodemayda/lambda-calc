@@ -77,7 +77,7 @@ betaReductionI (T m)
 innermostRedex :: LambdaTerm -> Maybe LambdaPreTerm
 innermostRedex (T m)
     | checkBetaNF (T m) = Nothing
-    | checkbetaRedex (T m) && any checkBetaNF (map T (subPreTerms m) \\ [T m]) = Just m
+    | checkbetaRedex (T m) && all checkBetaNF (map T (subPreTerms m) \\ [T m]) = Just m
     | otherwise = case m of
         V _ -> Nothing
         A p q ->
@@ -97,7 +97,7 @@ betaMultiReductionL m n = betaReductionL (betaMultiReductionL m (n-1))
 
 betaMultiReductionI :: LambdaTerm -> Integer -> LambdaTerm
 betaMultiReductionI m 0 = m
-betaMultiReductionI m n = betaReductionL (betaMultiReductionI m (n-1))
+betaMultiReductionI m n = betaReductionI (betaMultiReductionI m (n-1))
 
 
 betaReductionBoth ::LambdaTerm -> [LambdaTerm]
@@ -121,15 +121,17 @@ betaEtaMultiRed m 0 = m
 betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 
 
--- Not sure this is fully right, but seems to work as intended on test cases.
-betaReductionPar :: LambdaTerm -> LambdaTerm
-betaReductionPar (T (V x)) = T $ V x
-betaReductionPar (T (L x m)) = T $ L x (preTer $ betaReductionPar (T m))
-betaReductionPar (T (A p q)) = 
-    case p of 
-        L x m -> T $ fromMaybe (A (L x (preTer (betaReductionPar (T m)))) (preTer (betaReductionPar (T q)))) (substPreTerm (preTer (betaReductionPar (T m))) x (preTer (betaReductionPar (T q))))  
-        _ -> T $ A (preTer (betaReductionPar (T p))) (preTer (betaReductionPar (T q))) 
 
+-- NOTE: potentially unsafe fromJust, gotta think about it.
+betaReductionPar :: LambdaTerm -> LambdaTerm
+betaReductionPar (T t)
+    | checkBetaNF (T t) = T t
+    | otherwise = case t of
+        (V x)   -> T $ V x -- can't happen, covered by checkBetaNF but whatever
+        (L x m) -> T $ L x (preTer $ betaReductionPar (T m))
+        (A m n) -> case m of
+            L x p -> T $ fromJust (substPreTerm p x n)
+            _     -> T $ A (preTer $ betaReductionPar (T m)) (preTer $ betaReductionPar (T n))
 
 
 
