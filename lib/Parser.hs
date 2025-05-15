@@ -11,20 +11,16 @@ import Untyped
 
 
 {-
-idea is
+idea is:
 
+turn V 1 into x, (gotta  make a mapping of Int to available lowercase letter for multiples)
 
-turn "\x. m" into (L x (m))
-turn "\x m" into  L x m
-turn "(m n)" into  (A m n)
-turn "x" that is not preceded by "\" into T
+turn A m n into M N
+turn L x m into \x m and λx. M
 
-
-then 
-turn "m n r" into "((m n) r)"
-turn "\xy m" into "\x(\y m)"
-turn "\x.y. m" into "\xy. (m)"
-
+Turn \x1. ...\xn. to \x1...xn., and likewise
+Cancel outermost parenthesis
+Turn MNP to ...?(double check convention)
 -}
 
 

@@ -3,9 +3,8 @@
 {-# HLINT ignore "Avoid lambda" #-}
 module SimplyTypedChurch where
 
+
 import PreTerms
-import Untyped
-import Basics
 import SimplyTypedCurry
 
 
@@ -73,7 +72,7 @@ inferChurchAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) =
 ---- OTHER FUNCTIONS --------
 
 churchToPre :: RawTerm -> LambdaPreTerm
-churchToPre (R x) = (V x)
+churchToPre (R x) = V x
 churchToPre (RA m n) = A (churchToPre m) (churchToPre n)
 churchToPre (RL x m) = L (fst x) (churchToPre m)
 

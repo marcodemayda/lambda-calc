@@ -4,8 +4,6 @@
 module SimplyTypedCurry where
 
 import PreTerms
-import Untyped
-import Basics
 
 
 

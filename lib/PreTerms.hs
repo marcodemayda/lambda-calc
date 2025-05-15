@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module PreTerms where
 
 
@@ -34,22 +35,25 @@ freePreVars (V x) = [x]
 freePreVars (L x m) = [y | y <- freePreVars m,  y /= x]
 freePreVars (A m n) = nub $ freePreVars m ++ freePreVars n
 
-
 -- check if x is a freevariable of Pre-term n
 checkFreePreVar :: Var -> LambdaPreTerm -> Bool
 checkFreePreVar x n = x `elem` freePreVars n
 
-freshPreVar :: LambdaPreTerm -> Var
-freshPreVar m = head $ variables \\ freePreVars m
-
-
-lambdaVec :: [Var] -> LambdaPreTerm -> LambdaPreTerm
-lambdaVec xs m = foldr L m xs
 
 variablesPreOf :: LambdaPreTerm -> [Var]
 variablesPreOf (V x) = [x]
-variablesPreOf (A m n) = variablesPreOf m ++ variablesPreOf n
+variablesPreOf (A m n) = nub $ variablesPreOf m ++ variablesPreOf n
 variablesPreOf (L _ m) = variablesPreOf m
+
+
+freshPreVar :: LambdaPreTerm -> Var
+freshPreVar m = head $ variables \\ variablesPreOf m
+
+
+
+-- a vector of \x\y\z... M
+lambdaVec :: [Var] -> LambdaPreTerm -> LambdaPreTerm
+lambdaVec xs m = foldr L m xs
 
 
 -- substitution for Pre-terms, read "Pre-term with Var substituted for Pre-term"
@@ -83,12 +87,12 @@ alphaConv (L x m) y
 alphaConv (A _ _) _ = Nothing
 
 
-alphaConvTot:: LambdaPreTerm -> Var -> LambdaPreTerm
-alphaConvTot (V x) _ = V x
-alphaConvTot (L x m) y
-    | checkFreePreVar y m = L x m
-    | otherwise = L y (substPreTot m x (V y))
-alphaConvTot (A m n) _ = A m n
+-- alphaConvTot:: LambdaPreTerm -> Var -> LambdaPreTerm
+-- alphaConvTot (V x) _ = V x
+-- alphaConvTot (L x m) y
+--     | checkFreePreVar y m = L x m
+--     | otherwise = L y (substPreTot m x (V y))
+-- alphaConvTot (A m n) _ = A m n
 
 
 alphaEq :: LambdaPreTerm -> LambdaPreTerm -> Bool
@@ -107,10 +111,8 @@ newtype LambdaTerm = T LambdaPreTerm
     deriving (Show)
 
 instance Eq LambdaTerm where
+    (==) :: LambdaTerm -> LambdaTerm -> Bool
     T m == T n = alphaEq m n
-
-
--- data LambdaFull =  X Var | X LambdaFull LambdaFull | X LambdaFull LambdaFull
 
 
 -- print as string, and print as (nicer) IO
@@ -128,11 +130,18 @@ freeVars (T m)= freePreVars m
 checkFreeVar :: Var -> LambdaTerm -> Bool
 checkFreeVar x (T m) = x `elem` freePreVars m
 
+
+variablesOf :: LambdaTerm -> [Var]
+variablesOf (T (V x)) = [x]
+variablesOf (T (A m n)) = nub $ variablesPreOf m ++ variablesPreOf n
+variablesOf (T (L _ m)) = variablesPreOf m
+
+
 freshVar :: LambdaTerm -> Var
-freshVar m = head $ variables \\ freeVars m
+freshVar m = head $ variables \\ variablesOf m
 
 
--- again read "Term with Variable substituted for Term"
+-- again read "Term with Var substituted for Term"
 substTerm :: LambdaTerm -> Var -> LambdaTerm -> Maybe LambdaTerm
 substTerm (T m) x (T n) = do
     t <- substPreTerm m x n
@@ -143,25 +152,25 @@ prettySub (T m) x (T n) = prettierPrePrint $ fromJust $ substPreTerm m x n
 
 
 ---------- Total SubstitutionS ----------
-substPreTot :: LambdaPreTerm -> Var -> LambdaPreTerm -> LambdaPreTerm
-substPreTot (V y) x n
-    | y /= x    = V y
-    | otherwise = n
-substPreTot (A p q) x n =  A (substPreTot p x n) (substPreTot q x n)
-substPreTot (L y p) x n
-    | isJust$ substPreTerm (L y p) x n =  L y (substPreTot p x n)
-    | otherwise = substPreTot (alphaConvTot (L y p) (head$ ([1..] \\ freePreVars (L y p)) \\ [x])) x n
+-- substPreTot :: LambdaPreTerm -> Var -> LambdaPreTerm -> LambdaPreTerm
+-- substPreTot (V y) x n
+--     | y /= x    = V y
+--     | otherwise = n
+-- substPreTot (A p q) x n =  A (substPreTot p x n) (substPreTot q x n)
+-- substPreTot (L y p) x n
+--     | isJust$ substPreTerm (L y p) x n =  L y (substPreTot p x n)
+--     | otherwise = substPreTot (alphaConvTot (L y p) (head$ ([1..] \\ freePreVars (L y p)) \\ [x])) x n
 
 
-substTermTot :: LambdaTerm -> Var -> LambdaTerm -> LambdaTerm
-substTermTot (T m) x (T n)= T$ substPreTot m x n
+-- substTermTot :: LambdaTerm -> Var -> LambdaTerm -> LambdaTerm
+-- substTermTot (T m) x (T n)= T$ substPreTot m x n
 
-alphaTotConv :: LambdaPreTerm -> Var -> LambdaPreTerm
-alphaTotConv (V x) _ = V x
-alphaTotConv (L x m) y
-    | checkFreePreVar y m = L x m
-    | otherwise = L y (substPreTot m x (V y))
-alphaTotConv (A m n) _ = A m n
+-- alphaTotConv :: LambdaPreTerm -> Var -> LambdaPreTerm
+-- alphaTotConv (V x) _ = V x
+-- alphaTotConv (L x m) y
+--     | checkFreePreVar y m = L x m
+--     | otherwise = L y (substPreTot m x (V y))
+-- alphaTotConv (A m n) _ = A m n
 
 
 ---------- MORE FUNCTIONS ----------
@@ -193,29 +202,51 @@ subTerms (T m) = map T (subPreTerms m)
 preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
-
 -- NOTE: This might still need some work, it functions in "sane" cases, but i'm not sure it works generally
---potential problems: multiple instances of a sub-term; 
--- change an entire sub-term. read "Term M with sub-term p substituted for Term q".
-substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
-substForPreTerm m (V x) q = substPreTot m x q
+--potential problems: multiple instances of a sub-term;  Update: should be ok so long as it is fed a term that is unqiely identified, such as innermostRedex or the like, which is what I use it for anyways.
+-- New Problem: i should account for variable capture with alpha-conversion...
 
-substForPreTerm (V x) (A _ _) _         = V x
+-- change an entire sub-term. read "preTerm M with sub-term p substituted for preTerm q".
+
+substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
+substForPreTerm m (V x) q = substPreTerm m x q
+
+substForPreTerm (V _) (A _ _) _         = Nothing
+substForPreTerm (V _) (L _ _) _         = Nothing
+
 substForPreTerm (A j k) (A p r) q
-    | A j k == A p r                    = q
-    | A p r `elem` subPreTerms j        = A (substForPreTerm j (A p r) q) k
-    | A p r `elem` subPreTerms k        = A j (substForPreTerm k (A p r) q)
-    | otherwise                         = A j k
-substForPreTerm (L x k) (A p r) q
-    | A p r `elem` subPreTerms k        = L x (substForPreTerm k (A p r) q)
-    | otherwise                         = L x k
+    | A j k == A p r                    = Just q
+    | A p r `elem` subPreTerms j        =
+        do
+            j' <- substForPreTerm j (A p r) q
+            return $ A j' k
+    | A p r `elem` subPreTerms k        =
+        do
+            k' <- substForPreTerm k (A p r) q
+            return $ A j k'
+    | otherwise                         = Nothing
 
-substForPreTerm (V x) (L _ _) _         = V x
+
+substForPreTerm (L x k) (A p r) q
+    | A p r `elem` subPreTerms k        = do L x <$> substForPreTerm k (A p r) q
+    | otherwise                         = Nothing
+
+
 substForPreTerm (A j k) (L y r) q
-    | L y r `elem` subPreTerms j        = A (substForPreTerm j (L y r) q) k
-    | L y r `elem` subPreTerms k        = A j (substForPreTerm k (L y r) q)
-    | otherwise                         = A j k
+    | L y r `elem` subPreTerms j        =
+        do
+            j' <- substForPreTerm j (L y r) q
+            return $ A j' k
+    | L y r `elem` subPreTerms k        =
+        do
+            k' <- substForPreTerm k (L y r) q
+            return $ A j k'
+    | otherwise                         = Nothing
 substForPreTerm (L x s) (L y r) q
-    | L x s == L y r                    = q
-    | L y r `elem` subPreTerms (L x s)  = L x (substForPreTerm s (L y r) q)
-    | otherwise                         = L x s
+    | L x s == L y r                    = Just q
+    | L y r `elem` subPreTerms (L x s)  = L x <$> substForPreTerm s (L y r) q
+    | otherwise                         = Nothing
+
+
+
+

@@ -5,88 +5,103 @@ module Untyped where
 
 
 import PreTerms
+import Data.List
+import Data.Maybe
+
 
 ---------- BEGINNINGS ----------
 
 checkbetaRedex :: LambdaTerm -> Bool
-checkbetaRedex (T (V _)) = False
-checkbetaRedex (T (L _ _)) = False
 checkbetaRedex (T (A m _)) = case m of
     L _ _ -> True
     _ -> False
+checkbetaRedex _ = False
+
+
+headRedex :: LambdaTerm -> Maybe LambdaPreTerm
+headRedex (T m)= case m of
+    A (L x p) q -> Just $ A (L x p) q
+    _ -> Nothing
+
+checkHeaded :: LambdaTerm -> Bool
+checkHeaded = isJust . headRedex
 
 
 checkBetaNF :: LambdaTerm -> Bool
 checkBetaNF (T m) = all (\n -> not $ checkbetaRedex n) (subTerms $ T m)
 
 
-contractRedex :: LambdaPreTerm -> LambdaPreTerm
-contractRedex ( (V m)) =  V m
-contractRedex ( (L x m)) =  L x m
+
+contractRedex :: LambdaPreTerm -> Maybe LambdaPreTerm
 contractRedex ( (A m n)) = case m of
-    L x m' ->   substPreTot m' x n
-    _ -> A m n
+    L x m' -> do substPreTerm m' x n
+    _ -> Nothing
+contractRedex _ = Nothing
 
 
 
-
--- beta-reduction with innermost-first strategy
+-- beta-reduction with left-most strategy
 betaReductionL :: LambdaTerm -> LambdaTerm
 betaReductionL (T m)
     | checkBetaNF (T m) = T m
-    | otherwise = T $ substForPreTerm m (innermostRedex (T m)) (contractRedex $ innermostRedex (T m))
-
-innermostRedex :: LambdaTerm -> LambdaPreTerm
-innermostRedex (T (V x)) = V x
-innermostRedex (T (A m n))
-    | not $ checkBetaNF (T m) = case m of
-        V x -> V x
-        A p q -> innermostRedex $ T $ A p q
-        L _ _ ->  A m n
-    | not $ checkBetaNF (T n) = innermostRedex $ T n
-    | otherwise = A m n
-
-innermostRedex (T (L x m))
-    | not $ checkBetaNF (T m) = innermostRedex $ T m
-    | otherwise = L x m
+    | otherwise = T $ fromJust $ substForPreTerm m (fromJust $ leftmostRedex (T m)) (fromJust $ contractRedex $ fromJust $ leftmostRedex (T m))
 
 
-
--- beta-reduction with outermost-first strategy
-betaReductionR :: LambdaTerm -> LambdaTerm
-betaReductionR (T m)
-    | checkBetaNF (T m) = T m
-    | otherwise = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
-
-
---PROBLEM: looks down a branch but doesnt go back out for potentially better options
-outermostRedex :: LambdaTerm -> LambdaPreTerm
-outermostRedex (T m)
-    | checkbetaRedex (T m) = m
+leftmostRedex :: LambdaTerm -> Maybe LambdaPreTerm
+leftmostRedex (T m)
+    | checkbetaRedex (T m) = Just m
     | otherwise = case m of
-        (V x) -> V x
-        A n r
-            | checkbetaRedex $ T r -> r
-            | checkbetaRedex $ T n -> n
-            | checkbetaRedex $ T $ outermostRedex $ T r -> outermostRedex $ T r
-            | otherwise -> outermostRedex $ T n
-        L _ n -> outermostRedex$ T n
+        (V _) -> Nothing
+        A n r -> case leftmostRedex (T n) of
+            Just redex -> Just redex
+            Nothing -> leftmostRedex (T r)
+        L _ n -> leftmostRedex $ T n
+
+
+-- Beta reduction with head-first strategy. 
+betaReductionH :: LambdaTerm -> Maybe LambdaTerm
+betaReductionH (T m)
+    | checkHeaded (T m) = Just $ betaReductionL (T m)
+    | otherwise = Nothing
+
+
+-- Beta reduction with innermost-first strategy.
+betaReductionI :: LambdaTerm -> LambdaTerm
+betaReductionI (T m)
+    | checkBetaNF (T m) = T m
+    | otherwise = T $ fromJust $ substForPreTerm m (fromJust $ innermostRedex (T m)) (fromJust $ contractRedex $ fromJust $ innermostRedex (T m))
+
+
+-- Not sure if this is the right take on "innermost". Cause we prioritize the right side, which seems right when we already have left-most strategy. But what if the left-side has depth 200, and the right side depth 3? Maybe that should prioeritize left. More complicated though, i think then you have to do "a search-first, then evaluate and decide" function which is much harder
+-- ChatGPT says this is ok, and actually matches a common strategy called "call-by-value evaluation". Is that right? Who knows... will I call that good enough? Yup!
+innermostRedex :: LambdaTerm -> Maybe LambdaPreTerm
+innermostRedex (T m)
+    | checkBetaNF (T m) = Nothing
+    | checkbetaRedex (T m) && any checkBetaNF (map T (subPreTerms m) \\ [T m]) = Just m
+    | otherwise = case m of
+        V _ -> Nothing
+        A p q ->
+            case innermostRedex (T q) of
+                Just red -> Just red
+                Nothing -> innermostRedex (T p)
+        L _ body -> innermostRedex (T body)
 
 
 
 -------- OTHER REDUCTIONS--------------
-betaReductionBoth ::LambdaTerm -> [LambdaTerm]
-betaReductionBoth m =  betaReductionR m : [betaReductionR m]
 
 -- "transitive" closure as beta-reduction repeated n-times
 betaMultiReductionL :: LambdaTerm -> Integer -> LambdaTerm
 betaMultiReductionL m 0 = m
 betaMultiReductionL m n = betaReductionL (betaMultiReductionL m (n-1))
 
-betaMultiReductionR :: LambdaTerm -> Integer -> LambdaTerm
-betaMultiReductionR m 0 = m
-betaMultiReductionR m n = betaReductionR (betaMultiReductionR m (n-1))
+betaMultiReductionI :: LambdaTerm -> Integer -> LambdaTerm
+betaMultiReductionI m 0 = m
+betaMultiReductionI m n = betaReductionL (betaMultiReductionI m (n-1))
 
+
+betaReductionBoth ::LambdaTerm -> [LambdaTerm]
+betaReductionBoth m =  betaReductionL m : [betaReductionL m]
 
 betaMultiReductionBoth :: LambdaTerm -> Integer -> [LambdaTerm]
 betaMultiReductionBoth m 0 =  [m]
@@ -97,42 +112,53 @@ etaReduce (T m) = case m of
     L x (A m' (V y)) | x == y && checkFreePreVar x m' -> T m'
     _ -> T m
 
+-- Default to ReductionL because reasons.
 betaEtaRed :: LambdaTerm -> LambdaTerm
-betaEtaRed = betaReductionR . etaReduce
+betaEtaRed = betaReductionL . etaReduce
 
 betaEtaMultiRed :: LambdaTerm -> Integer -> LambdaTerm
 betaEtaMultiRed m 0 = m
 betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 
 
+-- Not sure this is fully right, but seems to work as intended on test cases.
 betaReductionPar :: LambdaTerm -> LambdaTerm
-betaReductionPar (T (V x)) = betaReductionR $ T$ V x
-betaReductionPar (T (A n r)) = betaReductionR $ T $ A (preTer $ betaReductionR $ T n) (preTer $ betaReductionR $ T r)
-betaReductionPar(T (L x n)) = T $ L x (preTer $ betaReductionPar $ T n)
+betaReductionPar (T (V x)) = T $ V x
+betaReductionPar (T (L x m)) = T $ L x (preTer $ betaReductionPar (T m))
+betaReductionPar (T (A p q)) = 
+    case p of 
+        L x m -> T $ fromMaybe (A (L x (preTer (betaReductionPar (T m)))) (preTer (betaReductionPar (T q)))) (substPreTerm (preTer (betaReductionPar (T m))) x (preTer (betaReductionPar (T q))))  
+        _ -> T $ A (preTer (betaReductionPar (T p))) (preTer (betaReductionPar (T q))) 
+
+
+
 
 betaMultiReductionPar :: LambdaTerm -> Integer -> LambdaTerm
 betaMultiReductionPar m 0 = m
 betaMultiReductionPar m n = betaReductionPar (betaMultiReductionPar m (n-1))
 
+
+-- By sectoin 1.7 left-strategy is normalizing. Might change to parallel to make more efficient though.
 completeDevelop :: LambdaTerm -> LambdaTerm
 completeDevelop m
-    | checkBetaNF $ betaMultiReductionPar m 20 = betaMultiReductionPar m 20
-    | otherwise = error "development is long"
+    | checkBetaNF $ betaMultiReductionL m 20 = betaMultiReductionL m 20
+    | otherwise = error "normal form is far (more than 20)"
 
 completeDevelopInf :: LambdaTerm -> LambdaTerm
 completeDevelopInf m =
-    let recursed = betaMultiReductionPar m 0
+    let recursed = betaMultiReductionL m 0
     in if checkBetaNF m
             then recursed
-            else  completeDevelopInf $ betaMultiReductionPar m 1
+            else  completeDevelopInf $ betaMultiReductionL m 1
 
 completeDevelopFor :: LambdaTerm -> Integer -> LambdaTerm
 completeDevelopFor m a
-    | checkBetaNF $ betaMultiReductionPar m a = betaMultiReductionPar m a
-    | otherwise = error "takes longer than that to reduce"
+    | checkBetaNF $ betaMultiReductionL m a = betaMultiReductionL m a
+    | otherwise = error "takes longer than that to normalize"
 
 ------------ EQUIVALENCES-------------------------
 
+--NOTE: not sure these work properly, have to think better about wether this climbs the syntax tree properly.
 -- basically, check if m == n, or if some reduction of one is == to the other, or if there's an equal r they both reduce to.
 betaEqInf :: LambdaTerm -> LambdaTerm -> Bool
 betaEqInf m n =
@@ -180,11 +206,11 @@ extEqFor = betaEtaEqFor
 checkNormalizingInf :: LambdaTerm -> Bool
 checkNormalizingInf m
     | checkBetaNF m = True
-    | otherwise = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..]
+    | otherwise = any (\x -> checkBetaNF$ betaMultiReductionL m x) [0..]
 
 checkNormalizing :: LambdaTerm -> Bool
-checkNormalizing m = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..20]
+checkNormalizing m = any (\x -> checkBetaNF$ betaMultiReductionL m x) [0..20]
 
 checkNormalizingFor :: LambdaTerm -> Integer -> Bool
-checkNormalizingFor m a = any (\x -> checkBetaNF$ betaMultiReductionR m x) [0..a]
+checkNormalizingFor m a = any (\x -> checkBetaNF$ betaMultiReductionL m x) [0..a]
 
