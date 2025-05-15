@@ -63,15 +63,19 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 -- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
 -- T (L 3 (V 3))
 
+
 -- >>>betaReductionPar twoRedex
--- Prelude.undefined
+-- T (A (L 3 (V 3)) (L 3 (V 3)))
 
 -- >>>betaReductionPar$ betaReductionPar twoRedex
--- Prelude.undefined
+-- T (L 3 (V 3))
 
+
+-- >>> betaMultiReductionPar (bigTerm 100) 
+-- T (A (L 1 (V 1)) (L 1 (V 1)))
 
 -- >>> completeDevelopInf (bigTerm 100)
--- Prelude.undefined
+-- T (L 1 (V 1))
 
 
 
@@ -99,3 +103,8 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
 -- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
+
+
+parallelTest = T$ A (preTer combiOm) (A (preTer combiId) (preTer combiId))
+
+

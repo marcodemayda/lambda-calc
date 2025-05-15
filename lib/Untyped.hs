@@ -6,9 +6,8 @@ module Untyped where
 
 import PreTerms
 import Data.List
-import Text.Read
 import Data.Maybe
-import Language.Haskell.TH.Syntax (nothingName)
+
 
 ---------- BEGINNINGS ----------
 
@@ -122,8 +121,16 @@ betaEtaMultiRed m 0 = m
 betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 
 
+-- Not sure this is fully right, but seems to work as intended on test cases.
 betaReductionPar :: LambdaTerm -> LambdaTerm
-betaReductionPar = undefined
+betaReductionPar (T (V x)) = T $ V x
+betaReductionPar (T (L x m)) = T $ L x (preTer $ betaReductionPar (T m))
+betaReductionPar (T (A p q)) = 
+    case p of 
+        L x m -> T $ fromMaybe (A (L x (preTer (betaReductionPar (T m)))) (preTer (betaReductionPar (T q)))) (substPreTerm (preTer (betaReductionPar (T m))) x (preTer (betaReductionPar (T q))))  
+        _ -> T $ A (preTer (betaReductionPar (T p))) (preTer (betaReductionPar (T q))) 
+
+
 
 
 betaMultiReductionPar :: LambdaTerm -> Integer -> LambdaTerm
