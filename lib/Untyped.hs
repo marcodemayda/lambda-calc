@@ -5,78 +5,73 @@ module Untyped where
 
 
 import PreTerms
+import Text.Read
+import Data.Maybe 
 
 ---------- BEGINNINGS ----------
 
 checkbetaRedex :: LambdaTerm -> Bool
-checkbetaRedex (T (V _)) = False
-checkbetaRedex (T (L _ _)) = False
 checkbetaRedex (T (A m _)) = case m of
     L _ _ -> True
     _ -> False
+checkbetaRedex _ = False
+
+
+headRedex :: LambdaTerm -> Maybe LambdaPreTerm
+headRedex (T m)= case m of 
+    A (L x p) q -> Just $ A (L x p) q
+    _ -> Nothing
+
+checkHeaded :: LambdaTerm -> Bool
+checkHeaded = isJust . headRedex 
 
 
 checkBetaNF :: LambdaTerm -> Bool
 checkBetaNF (T m) = all (\n -> not $ checkbetaRedex n) (subTerms $ T m)
 
 
-contractRedex :: LambdaPreTerm -> LambdaPreTerm
-contractRedex ( (V m)) =  V m
-contractRedex ( (L x m)) =  L x m
-contractRedex ( (A m n)) = case m of
-    L x m' ->   substPreTot m' x n
-    _ -> A m n
 
+contractRedex :: LambdaPreTerm -> Maybe LambdaPreTerm
+contractRedex ( (A m n)) = case m of
+    L x m' -> do substPreTerm m' x n
+    _ -> Nothing
+contractRedex _ = Nothing
 
 
 
 -- beta-reduction with innermost-first strategy
+-- NOT WORKING; TO FIX
 betaReductionL :: LambdaTerm -> LambdaTerm
 betaReductionL (T m)
     | checkBetaNF (T m) = T m
-    | otherwise = T $ substForPreTerm m (innermostRedex (T m)) (contractRedex $ innermostRedex (T m))
-
-innermostRedex :: LambdaTerm -> LambdaPreTerm
-innermostRedex (T (V x)) = V x
-innermostRedex (T (A m n))
-    | not $ checkBetaNF (T m) = case m of
-        V x -> V x
-        A p q -> innermostRedex $ T $ A p q
-        L _ _ ->  A m n
-    | not $ checkBetaNF (T n) = innermostRedex $ T n
-    | otherwise = A m n
-
-innermostRedex (T (L x m))
-    | not $ checkBetaNF (T m) = innermostRedex $ T m
-    | otherwise = L x m
+    | otherwise = T $ fromJust $ substForPreTerm m (fromJust $ leftmostRedex (T m)) (fromJust $ contractRedex $ fromJust $ leftmostRedex (T m))
 
 
-
--- beta-reduction with outermost-first strategy
-betaReductionR :: LambdaTerm -> LambdaTerm
-betaReductionR (T m)
-    | checkBetaNF (T m) = T m
-    | otherwise = T $ substForPreTerm m (outermostRedex (T m)) (contractRedex $ outermostRedex (T m))
-
-
---PROBLEM: looks down a branch but doesnt go back out for potentially better options
-outermostRedex :: LambdaTerm -> LambdaPreTerm
-outermostRedex (T m)
-    | checkbetaRedex (T m) = m
+leftmostRedex :: LambdaTerm -> Maybe LambdaPreTerm
+leftmostRedex (T m)
+    | checkbetaRedex (T m) = Just m
     | otherwise = case m of
-        (V x) -> V x
+        (V _) -> Nothing
         A n r
-            | checkbetaRedex $ T r -> r
-            | checkbetaRedex $ T n -> n
-            | checkbetaRedex $ T $ outermostRedex $ T r -> outermostRedex $ T r
-            | otherwise -> outermostRedex $ T n
-        L _ n -> outermostRedex$ T n
+            | checkbetaRedex $ T n -> Just n
+            | checkbetaRedex $ T r -> Just r
+            | checkBetaNF $ T n -> leftmostRedex $ T n
+            | otherwise -> leftmostRedex $ T r
+        L _ n -> leftmostRedex $ T n
+
+
+-- betaReductionR :: LambdaTerm -> LambdaTerm
+-- betaReductionR (T m)
+--     | checkBetaNF (T m) = T m
+--     | otherwise = T $ substForPreTerm m (leftmostRedex (T m)) (contractRedex $ leftmostRedex (T m))
+
+
 
 
 
 -------- OTHER REDUCTIONS--------------
 betaReductionBoth ::LambdaTerm -> [LambdaTerm]
-betaReductionBoth m =  betaReductionR m : [betaReductionR m]
+betaReductionBoth m =  betaReductionL m : [betaReductionL m]
 
 -- "transitive" closure as beta-reduction repeated n-times
 betaMultiReductionL :: LambdaTerm -> Integer -> LambdaTerm
@@ -85,7 +80,7 @@ betaMultiReductionL m n = betaReductionL (betaMultiReductionL m (n-1))
 
 betaMultiReductionR :: LambdaTerm -> Integer -> LambdaTerm
 betaMultiReductionR m 0 = m
-betaMultiReductionR m n = betaReductionR (betaMultiReductionR m (n-1))
+betaMultiReductionR m n = betaReductionL (betaMultiReductionR m (n-1))
 
 
 betaMultiReductionBoth :: LambdaTerm -> Integer -> [LambdaTerm]
@@ -98,7 +93,7 @@ etaReduce (T m) = case m of
     _ -> T m
 
 betaEtaRed :: LambdaTerm -> LambdaTerm
-betaEtaRed = betaReductionR . etaReduce
+betaEtaRed = betaReductionL . etaReduce
 
 betaEtaMultiRed :: LambdaTerm -> Integer -> LambdaTerm
 betaEtaMultiRed m 0 = m
@@ -106,8 +101,8 @@ betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 
 
 betaReductionPar :: LambdaTerm -> LambdaTerm
-betaReductionPar (T (V x)) = betaReductionR $ T$ V x
-betaReductionPar (T (A n r)) = betaReductionR $ T $ A (preTer $ betaReductionR $ T n) (preTer $ betaReductionR $ T r)
+betaReductionPar (T (V x)) = betaReductionL $ T$ V x
+betaReductionPar (T (A n r)) = betaReductionL $ T $ A (preTer $ betaReductionL $ T n) (preTer $ betaReductionL $ T r)
 betaReductionPar(T (L x n)) = T $ L x (preTer $ betaReductionPar $ T n)
 
 betaMultiReductionPar :: LambdaTerm -> Integer -> LambdaTerm
