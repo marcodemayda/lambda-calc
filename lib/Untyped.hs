@@ -70,11 +70,14 @@ betaReductionH (T m)
 betaReductionI :: LambdaTerm -> LambdaTerm
 betaReductionI (T m)
     | checkBetaNF (T m) = T m
-    | otherwise = T $ substForPreTermTot m (fromJust $ innermostRedex (T m)) (fromJust $ contractRedex $ fromJust $ innermostRedex (T m))
+    | otherwise =  T $ substForPreTermTot m redex reduced where
+        redex = fromJust $ innermostRedex (T m)
+        reduced = fromJust $ contractRedex $ fromJust $ innermostRedex (T m)
 
 
 -- Not sure if this is the right take on "innermost". Cause we prioritize the right side, which seems right when we already have left-most strategy. But what if the left-side has depth 200, and the right side depth 3? Maybe that should prioeritize left. More complicated though, i think then you have to do "a search-first, then evaluate and decide" function which is much harder
 -- ChatGPT says this is ok, and actually matches a common strategy called "call-by-value evaluation". Is that right? Who knows... will I call that good enough? Yup!
+
 innermostRedex :: LambdaTerm -> Maybe LambdaPreTerm
 innermostRedex (T m)
     | checkBetaNF (T m) = Nothing

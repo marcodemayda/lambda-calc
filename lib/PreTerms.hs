@@ -151,27 +151,6 @@ prettySub :: LambdaTerm -> Var -> LambdaTerm -> IO ()
 prettySub (T m) x (T n) = prettierPrePrint $ fromJust $ substPreTerm m x n
 
 
----------- Total SubstitutionS ----------
--- substPreTot :: LambdaPreTerm -> Var -> LambdaPreTerm -> LambdaPreTerm
--- substPreTot (V y) x n
---     | y /= x    = V y
---     | otherwise = n
--- substPreTot (A p q) x n =  A (substPreTot p x n) (substPreTot q x n)
--- substPreTot (L y p) x n
---     | isJust$ substPreTerm (L y p) x n =  L y (substPreTot p x n)
---     | otherwise = substPreTot (alphaConvTot (L y p) (head$ ([1..] \\ freePreVars (L y p)) \\ [x])) x n
-
-
--- substTermTot :: LambdaTerm -> Var -> LambdaTerm -> LambdaTerm
--- substTermTot (T m) x (T n)= T$ substPreTot m x n
-
--- alphaTotConv :: LambdaPreTerm -> Var -> LambdaPreTerm
--- alphaTotConv (V x) _ = V x
--- alphaTotConv (L x m) y
---     | checkFreePreVar y m = L x m
---     | otherwise = L y (substPreTot m x (V y))
--- alphaTotConv (A m n) _ = A m n
-
 
 ---------- MORE FUNCTIONS ----------
 
@@ -202,6 +181,9 @@ subTerms (T m) = map T (subPreTerms m)
 preTer :: LambdaTerm -> LambdaPreTerm
 preTer (T m) = m
 
+
+------------- TOTAL FUNCTIONS -----------------
+--------(of functions that aren't already)--------
 -- NOTE: This might still need some work, it functions in "sane" cases, but i'm not sure it works generally
 --potential problems: multiple instances of a sub-term;  Update: should be ok so long as it is fed a term that is unqiely identified, such as innermostRedex or the like, which is what I use it for anyways.
 -- New Problem: i should account for variable capture with alpha-conversion...
@@ -252,6 +234,8 @@ substForPreTerm (L x s) (L y r) q
 substForPreTermTot :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
 substForPreTermTot m p q = case substForPreTerm m p q of
     Just m' -> m'
-    Nothing -> case p of
+    Nothing 
+        | p `elem` subPreTerms m -> case p of
         L x n -> substForPreTermTot m (alphaConvTot (L x n)) q
-        _ -> m  -- default: if not a lambda abstraction, no alpha-conv possible → return unchanged
+        _ -> m
+        | otherwise -> error "second arguments needs to be a sub(pre)term of first"
