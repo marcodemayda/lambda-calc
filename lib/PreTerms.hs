@@ -87,12 +87,11 @@ alphaConv (L x m) y
 alphaConv (A _ _) _ = Nothing
 
 
--- alphaConvTot:: LambdaPreTerm -> Var -> LambdaPreTerm
--- alphaConvTot (V x) _ = V x
--- alphaConvTot (L x m) y
---     | checkFreePreVar y m = L x m
---     | otherwise = L y (substPreTot m x (V y))
--- alphaConvTot (A m n) _ = A m n
+alphaConvTot:: LambdaPreTerm -> LambdaPreTerm
+alphaConvTot (L x m) = case alphaConv (L x m) (head $ freePreVars (L x m)) of 
+    Just n -> n
+    Nothing -> error "stuff"
+alphaConvTot m = m
 
 
 alphaEq :: LambdaPreTerm -> LambdaPreTerm -> Bool
@@ -100,8 +99,9 @@ alphaEq (V x) (V y) = x == y
 alphaEq (A m1 n1) (A m2 n2) = alphaEq m1 m2 && alphaEq n1 n2
 alphaEq (L x m) (L y n)
     | x == y = alphaEq m n
-    | alphaConv (L x m) y == Just (L y n) = True
-    | otherwise =  False
+    | otherwise = case alphaConv (L x m) y of
+                    Just (L _ m') -> alphaEq m' n
+                    _        -> False
 alphaEq _ _ = False
 
 
@@ -249,4 +249,9 @@ substForPreTerm (L x s) (L y r) q
 
 
 
-
+substForPreTermTot :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
+substForPreTermTot m p q = case substForPreTerm m p q of
+    Just m' -> m'
+    Nothing -> case p of
+        L x n -> substForPreTermTot m (alphaConvTot (L x n)) q
+        _ -> m  -- default: if not a lambda abstraction, no alpha-conv possible → return unchanged

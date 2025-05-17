@@ -44,8 +44,9 @@ contractRedex _ = Nothing
 betaReductionL :: LambdaTerm -> LambdaTerm
 betaReductionL (T m)
     | checkBetaNF (T m) = T m
-    | otherwise = T $ fromJust $ substForPreTerm m (fromJust $ leftmostRedex (T m)) (fromJust $ contractRedex $ fromJust $ leftmostRedex (T m))
-
+    | otherwise =  T $ substForPreTermTot m redex reduced where
+        redex = fromJust $ leftmostRedex (T m)
+        reduced = fromJust $ contractRedex $ fromJust $ leftmostRedex (T m)
 
 leftmostRedex :: LambdaTerm -> Maybe LambdaPreTerm
 leftmostRedex (T m)
@@ -69,7 +70,7 @@ betaReductionH (T m)
 betaReductionI :: LambdaTerm -> LambdaTerm
 betaReductionI (T m)
     | checkBetaNF (T m) = T m
-    | otherwise = T $ fromJust $ substForPreTerm m (fromJust $ innermostRedex (T m)) (fromJust $ contractRedex $ fromJust $ innermostRedex (T m))
+    | otherwise = T $ substForPreTermTot m (fromJust $ innermostRedex (T m)) (fromJust $ contractRedex $ fromJust $ innermostRedex (T m))
 
 
 -- Not sure if this is the right take on "innermost". Cause we prioritize the right side, which seems right when we already have left-most strategy. But what if the left-side has depth 200, and the right side depth 3? Maybe that should prioeritize left. More complicated though, i think then you have to do "a search-first, then evaluate and decide" function which is much harder
@@ -122,7 +123,7 @@ betaEtaMultiRed m n = betaEtaRed (betaEtaMultiRed m (n-1))
 
 
 
--- NOTE: potentially unsafe fromJust, gotta think about it.
+-- NOTE: potentially unsafe ise of fromJust, gotta think about it.
 betaReductionPar :: LambdaTerm -> LambdaTerm
 betaReductionPar (T t)
     | checkBetaNF (T t) = T t
