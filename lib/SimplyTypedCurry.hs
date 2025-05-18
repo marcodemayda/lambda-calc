@@ -42,29 +42,28 @@ contextTypes = map snd
 contextRan :: Context -> [ArType]
 contextRan = contextTypes
 
-contextAdd :: Context -> (Var,ArType) -> Context
-contextAdd = undefined
 
 -- domain contexts need to be (partial) functional w.r.t variables.
 checkWellDefContext :: Context -> Bool
 checkWellDefContext ga = map fst ga == nub (map fst ga)
+-- DOUBLE CHECK? This seems wrong?
+
 
 -- type of a variable in a context.
 typeOf :: Var -> Context -> Maybe ArType
 typeOf = lookup
 
-
--- THe list of variables in a context that have a of a given type
+-- The list of variables in a context that have a of a given type
 typedVars ::  Context -> ArType  -> [Var]
 typedVars g t
     | t `elem` contextRan g = [x | x <- contextDom g, (x,t) `elem` g]
     | otherwise = []
 
 
-
+-- add tuple to context
 contextExtend :: Context -> (Var,ArType) -> Maybe Context
 contextExtend ga tup
-    |checkWellDefContext (ga ++ [tup]) = Just $ ga ++ [tup]
+    | checkWellDefContext (ga ++ [tup]) = Just $ ga ++ [tup]
     | otherwise = Nothing
 
 
@@ -73,12 +72,14 @@ contextExtend ga tup
 type JudgmentCu = (Context, (LambdaTerm, ArType))
 
 
-
 checkInferVAR :: JudgmentCu -> Bool
-checkInferVAR (ga, (la, t)) = any (\(x,y) -> (T (V x),y) == (la,t)) ga
+checkInferVAR (ga, (la, t)) 
+    | checkWellDefContext ga = any (\(x,y) -> (T (V x),y) == (la,t)) ga
+    | otherwise = error "context is not well-defined"
 
 checkInferABS :: JudgmentCu -> JudgmentCu -> Bool
-checkInferABS (ga1, (la1,t1)) (ga2, (la2,t2)) = case la2 of
+checkInferABS (ga1, (la1,t1)) (ga2, (la2,t2)) 
+    | checkWellDefContext ga1 && checkWellDefContext ga2= case la2 of
         T (L x m) -> case t2 of
                 si `To` ta -> typeOf x ga1 == Just si
                             && t1 == ta
@@ -86,11 +87,14 @@ checkInferABS (ga1, (la1,t1)) (ga2, (la2,t2)) = case la2 of
                             && la1 == T m
                 _ -> False
         _ -> False
+    | otherwise = error "context is not well-defined"
 
 checkInferAPP :: JudgmentCu -> JudgmentCu -> JudgmentCu ->  Bool
-checkInferAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) =
-    case t1 of
+checkInferAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) 
+    | checkWellDefContext ga1 && checkWellDefContext ga2 && checkWellDefContext ga3 
+    = case t1 of
         ta `To` si -> ga1 == ga2 && ga2 == ga3
                     && la3 == T  (A (preTer la1) (preTer la2))
                     && t2 == si && t3 == ta
         _ -> False
+    | otherwise = error "context is not well-defined"

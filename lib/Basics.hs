@@ -3,8 +3,6 @@ module Basics where
 import PreTerms
 import Untyped
 
-import Data.Maybe
-
 
 
 combiId :: LambdaTerm
@@ -118,6 +116,7 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 
 
+parallelTest :: LambdaTerm
 parallelTest = T$ A (preTer combiOm) (A (preTer combiId) (preTer combiId))
 
 --Now it's correct! 
