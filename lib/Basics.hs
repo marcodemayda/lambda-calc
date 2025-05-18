@@ -39,7 +39,7 @@ myCheck :: Bool
 myCheck = checkNormalizingInf (bigTerm 100)
 
 -- >>> myCheck
--- True
+-- ProgressCancelledException
 
 myReduction :: LambdaTerm
 myReduction = betaMultiReductionI (bigTerm 100) 98
@@ -52,24 +52,36 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 -- >>> betaReductionL twoRedex
 -- T (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
+
+
 -- >>> betaReductionL $ betaReductionL twoRedex
 -- T (A (L 3 (V 3)) (L 3 (V 3)))
+
+
 -- >>> betaReductionL $ betaReductionL $ betaReductionL twoRedex
 -- T (L 3 (V 3))
 
 -- >>> betaReductionI twoRedex
--- T (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
+-- T (A (L 1 (V 1)) (A (L 3 (V 3)) (L 3 (V 3))))
+
 -- >>> betaReductionI $ betaReductionI twoRedex
--- T (A (L 3 (V 3)) (L 3 (V 3)))
+-- T (A (L 1 (V 1)) (L 3 (V 3)))
+
 -- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
 -- T (L 3 (V 3))
 
 
--- >>>betaReductionPar twoRedex
+
+
+-- >>> betaReductionPar twoRedex
 -- T (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
--- >>>betaReductionPar$ betaReductionPar twoRedex
+-- >>> betaReductionPar$ betaReductionPar twoRedex
 -- T (A (L 3 (V 3)) (L 3 (V 3)))
+
+-- >>> betaReductionPar$ betaReductionPar$ betaReductionPar twoRedex
+-- T (L 3 (V 3))
+
 
 -- >>> completeDevelopInf (bigTerm 100)
 -- T (L 1 (V 1))
@@ -80,14 +92,16 @@ hiddenRed :: LambdaTerm
 hiddenRed =  T (A (L 1 (V 1)) (V 2)) 
 
 -- >>>betaReductionL hiddenRed
--- T (V 2)
+
 
 -- LOOPING combiY
 -- >>> prettyPrint$ combiY
 -- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
 
+
 -- >>> prettyPrint $ betaReductionL $ combiY
 -- "(\\7. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
+
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ combiY
 -- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
@@ -98,8 +112,10 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
 -- "(\\7. (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))))"
 
+
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
 -- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
+
 
 
 parallelTest = T$ A (preTer combiOm) (A (preTer combiId) (preTer combiId))
@@ -110,22 +126,28 @@ parallelTest = T$ A (preTer combiOm) (A (preTer combiId) (preTer combiId))
 -- "((\\1. (1 1)) ((\\1. 1) (\\1. 1)))"
 
 
+
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 1)
 -- "((\\1. (1 1)) (\\1. 1))"
+
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 2)
 -- "((\\1. 1) (\\1. 1))"
 
 
+
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 1)
 -- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
+
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 2)
 -- "((\\1. 1) ((\\1. 1) (\\1. 1)))"
+
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 3)
 -- "((\\1. 1) (\\1. 1))"
 
 
 -- >>> prettyPrint $ (betaMultiReductionPar parallelTest 1)
 -- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
+
 -- >>> prettyPrint $ (betaMultiReductionPar parallelTest 2)
 -- "((\\1. 1) (\\1. 1))"
 
