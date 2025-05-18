@@ -1,9 +1,12 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Avoid lambda using `infix`" #-}
 module PreTerms where
 
 
 import Data.Maybe
 import Data.List
+-- import MissingH Data.List.Utils
 
 
 ---------- PRE TERMS ----------
@@ -43,21 +46,114 @@ lambdaVec xs m = foldr L m xs
 
 
 
+
+-------------- SUBSTITUTIONS -------------------------
+cartProd :: [a] -> [b] -> [(a, b)]
+cartProd xs ys = [(x,y) | x <- xs, y <- ys]
+
+isAbsWith :: LambdaPreTerm -> Var -> Bool
+isAbsWith m y = case m of
+    L z _
+        | z == y -> True
+        | otherwise -> False
+    _ -> False
+
+
+checkSubstIllDefined :: LambdaPreTerm -> Var -> LambdaPreTerm -> Bool
+checkSubstIllDefined m x n = any (\(m',y)-> checkFreePreVar x m' && isAbsWith m y && y `elem` freePreVars n ) (cartProd (subPreTerms m) (freePreVars m))
+
 -- substitution for Pre-terms, read "Pre-term with Var substituted for Pre-term"
 substPreTerm :: LambdaPreTerm -> Var -> LambdaPreTerm -> Maybe LambdaPreTerm
-substPreTerm (V y) x n
-    | y /= x    = Just (V y)
-    | otherwise = Just n
-substPreTerm (A p q) x n = do
-    p' <- substPreTerm p x n
-    q' <- substPreTerm q x n
-    return $ A p' q'
-substPreTerm (L y p) x n
-    | checkFreePreVar x (L y p) && checkFreePreVar y n = Nothing -- Variable capture (see definition 1.2.4)
-    | x /= y && not (checkFreePreVar y n && checkFreePreVar x p) = do
-        p' <- substPreTerm p x n
-        return $ L y p'
-    | otherwise = Just $ L y p
+substPreTerm m x n
+    | checkSubstIllDefined m x n  = Nothing
+    | otherwise = case m of
+        V y
+            | y==x -> Just n
+            | otherwise -> Just $ V y
+        A p q -> do
+            p' <- substPreTerm p x n
+            q' <- substPreTerm q x n
+            return $ A p' q'
+        L y p
+            | y ==x -> Just $ L y p
+            | otherwise -> do
+                p' <- substPreTerm p x n
+                return $ L y p'
+
+-- old version
+-- substPreTerm (V y) x n
+--     | y /= x    = Just (V y)
+--     | otherwise = Just n
+-- substPreTerm (A p q) x n = do
+--     p' <- substPreTerm p x n
+--     q' <- substPreTerm q x n
+--     return $ A p' q'
+-- substPreTerm (L y p) x n
+--     | checkFreePreVar x (L y p) && checkFreePreVar y n = Nothing -- Variable capture (see definition 1.2.4)
+--     | x /= y && not (checkFreePreVar y n && checkFreePreVar x p) = do
+--         p' <- substPreTerm p x n
+--         return $ L y p'
+--     | otherwise = Just $ L y p
+
+
+
+
+countElem :: Eq a => a -> [a] -> Int
+countElem i = length . filter (i==)
+
+checkSubstForIllDefined :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Bool
+checkSubstForIllDefined m p n = 
+    p `elem` subPreTerms m && -- p is a sub-term
+    countElem p (subPreTerms m) == 1 && 
+    False -- p is uniqe in m
+    
+-- change an entire sub-term. read "preTerm M with sub-term p substituted for preTerm q".
+-- NOTE: the intended use is when the term being substituted can be uniquely identitfied, as this substitutes for only one occurence of the sub-term
+-- substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
+-- substForPreTerm m p n
+--     | checkSubstForIllDefined m p n = Nothing
+--     | otherwise = undefined
+
+
+-- old verions
+substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
+substForPreTerm m (V x) q = substPreTerm m x q
+
+substForPreTerm (V _) (A _ _) _         = Nothing
+substForPreTerm (V _) (L _ _) _         = Nothing
+
+substForPreTerm (A j k) (A p r) q
+    | A j k == A p r                    = Just q
+    | A p r `elem` subPreTerms j        =
+        do
+            j' <- substForPreTerm j (A p r) q
+            return $ A j' k
+    | A p r `elem` subPreTerms k        =
+        do
+            k' <- substForPreTerm k (A p r) q
+            return $ A j k'
+    | otherwise                         = Nothing
+
+
+substForPreTerm (L x k) (A p r) q
+    | A p r `elem` subPreTerms k  -- && x `notElem` freePreVars k -- unsure about this part. Including it seems to make examples not work. But a priori i'd think it needs ot be included.
+                                        = do L x <$> substForPreTerm k (A p r) q
+    | otherwise                         = Nothing
+
+
+substForPreTerm (A j k) (L y r) q
+    | L y r `elem` subPreTerms j        = do
+                                            j' <- substForPreTerm j (L y r) q
+                                            return $ A j' k
+    | L y r `elem` subPreTerms k        = do
+                                            k' <- substForPreTerm k (L y r) q
+                                            return $ A j k'
+    | otherwise                         = Nothing
+substForPreTerm (L x s) (L y r) q
+    | L x s == L y r                    = Just q
+    | L y r `elem` subPreTerms (L x s)  = L x <$> substForPreTerm s (L y r) q
+    | otherwise                         = Nothing
+
 
 
 -- alpha conevrt Term with Variable
@@ -77,12 +173,6 @@ alphaConvFor :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
 alphaConvFor m n = case alphaConv m (freshPreVar n) of
     Just m' -> m'
     _ -> error "i'm not sure what to do yet or if this is possible"
--- DOUBLE CHECK
-alphaConvTot:: LambdaPreTerm -> LambdaPreTerm
-alphaConvTot (L x m) = case alphaConv (L x m) (head $ freePreVars (L x m)) of
-    Just n -> n
-    Nothing -> error "stuff"
-alphaConvTot m = m
 
 
 alphaEq :: LambdaPreTerm -> LambdaPreTerm -> Bool
@@ -169,46 +259,22 @@ preTer (T m) = m
 -- should account for variable capture with alpha-conversion... not sure it does as of yet.
 
 
--- change an entire sub-term. read "preTerm M with sub-term p substituted for preTerm q".
--- NOTE: this prioritizes left side if there's mulitple instances of p. 
--- The intended use is for cases when we're sure we can uniquely identify p!
-substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
-substForPreTerm m (V x) q = substPreTerm m x q
-
-substForPreTerm (V _) (A _ _) _         = Nothing
-substForPreTerm (V _) (L _ _) _         = Nothing
-
-substForPreTerm (A j k) (A p r) q
-    | A j k == A p r                    = Just q
-    | A p r `elem` subPreTerms j        =
-        do
-            j' <- substForPreTerm j (A p r) q
-            return $ A j' k
-    | A p r `elem` subPreTerms k        =
-        do
-            k' <- substForPreTerm k (A p r) q
-            return $ A j k'
-    | otherwise                         = Nothing
+-- converts to alpha equivalent instead of failing
+-- substPreTermTot :: LambdaPreTerm -> Var -> LambdaPreTerm -> LambdaPreTerm
+-- substPreTermTot m x n= case substPreTerm m x n of
+--     Just m' -> m'
+--     _ -> substPreTermTot (alphaConvTot m (newVar)) () n
 
 
-substForPreTerm (L x k) (A p r) q
-    | A p r `elem` subPreTerms k  -- && x `notElem` freePreVars k -- unsure about this part. Including it seems to make examples not work. But a priori i'd think it needs ot be included.
-                                        = do L x <$> substForPreTerm k (A p r) q
-    | otherwise                         = Nothing
+-- -- DOUBLE CHECK
+-- alphaConvTot:: LambdaPreTerm -> Var -> LambdaPreTerm
+-- alphaConvTot (L x m) = case alphaConv (L x m) (head $ freePreVars (L x m)) of
+--     Just n -> n
+--     Nothing -> error "stuff"
+-- alphaConvTot m = m
 
 
-substForPreTerm (A j k) (L y r) q
-    | L y r `elem` subPreTerms j        = do
-                                            j' <- substForPreTerm j (L y r) q
-                                            return $ A j' k
-    | L y r `elem` subPreTerms k        = do
-                                            k' <- substForPreTerm k (L y r) q
-                                            return $ A j k'
-    | otherwise                         = Nothing
-substForPreTerm (L x s) (L y r) q
-    | L x s == L y r                    = Just q
-    | L y r `elem` subPreTerms (L x s)  = L x <$> substForPreTerm s (L y r) q
-    | otherwise                         = Nothing
+
 
 
 substForPreTermTot :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm

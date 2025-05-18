@@ -131,12 +131,12 @@ betaMultiReductionI m 0 = m
 betaMultiReductionI m n = betaReductionI (betaMultiReductionI m (n-1))
 
 
-betaReductionBoth ::LambdaTerm -> [LambdaTerm]
-betaReductionBoth m =  betaReductionL m : [betaReductionL m]
+betaReductionList ::LambdaTerm -> [LambdaTerm]
+betaReductionList m =  betaReductionPar m : [betaReductionPar m]
 
-betaMultiReductionBoth :: LambdaTerm -> Integer -> [LambdaTerm]
-betaMultiReductionBoth m 0 =  [m]
-betaMultiReductionBoth m n =  betaReductionBoth m ++ betaMultiReductionBoth m (n-1)
+betaMultiReductionList :: LambdaTerm -> Integer -> [LambdaTerm]
+betaMultiReductionList m 0 =  [m]
+betaMultiReductionList m n =  betaReductionList m ++ betaMultiReductionList m (n-1)
 
 
 betaEtaMultiRed :: LambdaTerm -> Integer -> LambdaTerm
@@ -173,27 +173,31 @@ completeDevelopFor m a
 
 --NOTE: not sure these work properly, have to think better about wether this climbs the syntax tree properly.
 -- basically, check if m == n, or if some reduction of one is == to the other, or if there's an equal r they both reduce to.
-betaEqInf :: LambdaTerm -> LambdaTerm -> Bool
-betaEqInf m n =
-    m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..]) [0..]
-
-
 betaEq :: LambdaTerm -> LambdaTerm -> Bool
 betaEq m n =
     m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..20] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..20] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..20]) [0..20]
+    any (\x -> any (\y -> y == n) (betaMultiReductionList m x)) [0..] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionList n x)) [0..] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionList n y)) (betaMultiReductionList m x)) [0..]) [0..]
 
+
+
+-- Good GPT tip: make these bounded ones retrun Maybe Bool
+betaEqBound :: LambdaTerm -> LambdaTerm -> Maybe Bool
+betaEqBound m n
+    | m == n ||
+    any (\x -> any (\y -> y == n) (betaMultiReductionList m x)) [0..20] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionList n x)) [0..20] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionList n y)) (betaMultiReductionList m x)) [0..20]) [0..20] = Just True
+    | otherwise = Nothing -- takes longer than that to check
+
+-- do we reach beta-equivalence in n-many steps?
 betaEqFor :: LambdaTerm -> LambdaTerm -> Integer ->  Bool
 betaEqFor m n a =
     m == n ||
-    any (\x -> any (\y -> y == n) (betaMultiReductionBoth m x)) [0..a] ||
-    any (\x -> any (\y -> y == m) (betaMultiReductionBoth n x)) [0..a] ||
-    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionBoth n y)) (betaMultiReductionBoth m x)) [0..a]) [0..a]
+    any (\x -> any (\y -> y == n) (betaMultiReductionList m x)) [0..a] ||
+    any (\x -> any (\y -> y == m) (betaMultiReductionList n x)) [0..a] ||
+    any (\x -> any (\y -> any (\m' -> any (\n' -> m' == n') (betaMultiReductionList n y)) (betaMultiReductionList m x)) [0..a]) [0..a]
 
 
 betaEtaEq :: LambdaTerm -> LambdaTerm -> Bool
