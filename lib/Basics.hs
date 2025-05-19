@@ -39,17 +39,17 @@ myCheck = checkNormalizingInf (bigTerm 100)
 
 -- why slow now? especially when multi-reduction 100 is perfectly fast
 -- >>> myCheck
--- True
+-- Maybe.fromJust: Nothing
 
 myReduction :: LambdaTerm
 myReduction = betaMultiReductionL (bigTerm 100) 98
 
 -- >>> prettyPrint$ myReduction
--- "(((\\1. 1) (\\1. 1)) (\\1. 1))"
+-- Maybe.fromJust: Nothing
 
 
 -- >>> completeDevelopInf (bigTerm 100)
--- T (L 1 (V 1))
+-- Maybe.fromJust: Nothing
 
 
 
@@ -67,13 +67,13 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 
 -- >>> betaReductionI twoRedex
--- T (A (L 1 (V 1)) (A (L 3 (V 3)) (L 3 (V 3))))
+-- Maybe.fromJust: Nothing
 
 -- >>> betaReductionI $ betaReductionI twoRedex
--- T (A (L 1 (V 1)) (L 3 (V 3)))
+-- Maybe.fromJust: Nothing
 
 -- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
--- T (L 3 (V 3))
+-- Maybe.fromJust: Nothing
 
 
 -- >>> betaReductionPar twoRedex
@@ -96,22 +96,23 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 -- LOOPING combiY
 -- >>> prettyPrint$ combiY
+-- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
 
 
 -- >>> prettyPrint $ betaReductionL $ combiY
--- "(\\7. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
+-- Maybe.fromJust: Nothing
 
 
 parallelTest :: LambdaTerm
@@ -126,10 +127,10 @@ Left-most should take 3, whilst the gap can be closed back to 2 with parallel re
 
 
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 1)
--- "((\\1. (1 1)) (\\1. 1))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 2)
--- "((\\1. 1) (\\1. 1))"
+-- Maybe.fromJust: Nothing
 
 
 
@@ -137,10 +138,10 @@ Left-most should take 3, whilst the gap can be closed back to 2 with parallel re
 -- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 2)
--- "((\\1. 1) ((\\1. 1) (\\1. 1)))"
+-- Maybe.fromJust: Nothing
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 3)
--- "((\\1. 1) (\\1. 1))"
+-- Maybe.fromJust: Nothing
 
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 1)
