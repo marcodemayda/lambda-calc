@@ -363,30 +363,12 @@ preTer (T m) = m
 -- should account for variable capture with alpha-conversion... not sure it does as of yet.
 
 
--- converts to alpha equivalent instead of failing
--- substPreTermTot :: LambdaPreTerm -> Var -> LambdaPreTerm -> LambdaPreTerm
--- substPreTermTot m x n= case substPreTerm m x n of
+-- substForPreTermTot :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
+-- substForPreTermTot m p q = case substForPreTerm m p q of
 --     Just m' -> m'
---     _ -> substPreTermTot (alphaConvTot m (newVar)) () n
-
-
--- -- DOUBLE CHECK
--- alphaConvTot:: LambdaPreTerm -> Var -> LambdaPreTerm
--- alphaConvTot (L x m) = case alphaConv (L x m) (head $ freePreVars (L x m)) of
---     Just n -> n
---     Nothing -> error "stuff"
--- alphaConvTot m = m
-
-
-
-
-
-substForPreTermTot :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
-substForPreTermTot m p q = case substForPreTerm m p q of
-    Just m' -> m'
-    Nothing -> case substForPreTerm (alphaConvFor m p) p q of
-        Just t -> t
-        _ -> error "this shoudln't happen"
+--     Nothing -> case substForPreTerm (alphaConvFor m p) p q of
+--         Just t -> t
+--         _ -> error "this shoudln't happen"
 
 
 
