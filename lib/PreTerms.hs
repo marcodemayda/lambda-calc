@@ -38,6 +38,10 @@ variablesPreOf (L _ m) = variablesPreOf m
 freshPreVar :: LambdaPreTerm -> Var
 freshPreVar m = head $ variables \\ variablesPreOf m
 
+
+freshPreVar2 :: LambdaPreTerm -> LambdaPreTerm -> Var
+freshPreVar2 m n = head $ variables \\ (variablesPreOf m ++ variablesPreOf n)
+
 -- a vector of \x\y\z... M
 lambdaVec :: [Var] -> LambdaPreTerm -> LambdaPreTerm
 lambdaVec xs m = foldr L m xs
@@ -78,8 +82,6 @@ substPreTerm m x n
                 return $ L y p'
 
 
-
-
 {-
 reworked to much better, cleaner and more intuitive version, thanks to 
 https://stackoverflow.com/questions/26904559/lambda-calculus-entire-expression-substitution
@@ -109,7 +111,7 @@ syntaxTreeButtons m x = case m of
     _ -> Nothing
 
 
--- get a subterm of m from a button sequence
+-- get a subPreterm of m from a button sequence
 getSubPretermAt :: LambdaPreTerm -> [Int] -> Maybe LambdaPreTerm
 getSubPretermAt m [] =  Just m
 getSubPretermAt m (x : xs) = do
@@ -117,20 +119,30 @@ getSubPretermAt m (x : xs) = do
     getSubPretermAt u xs
 
 
+-- doublecheck safe??
+getSubPretermCodes :: LambdaPreTerm -> LambdaPreTerm -> [[Int]]
+getSubPretermCodes m n
+    | m == n = [[]]
+    | otherwise = case m of
+        V _ -> []
+        L _ p -> map (0:) (getSubPretermCodes p n)
+        A p q -> map (1:) (getSubPretermCodes p n) ++ map (2:) (getSubPretermCodes q n)
+
+
 -- get the codes for subPreterm n in m
 -- DOUBLE CHECK: does this actually always return nothing when n is not a subterm?
-getSubPretermCodes :: LambdaPreTerm -> LambdaPreTerm -> Maybe [[Int]]
-getSubPretermCodes m n
-    | m == n = Just [[]]
-    | otherwise = case m of
-        V _ -> Nothing
-        L _ p -> do
-            ps <- getSubPretermCodes p n
-            return [0:ys | ys <- ps]
-        A p q -> do
-            ps <- getSubPretermCodes p n
-            qs <- getSubPretermCodes q n
-            return $ [1:ys | ys <- ps] ++ [2:ys | ys <- qs]
+-- getSubPretermCodes :: LambdaPreTerm -> LambdaPreTerm -> Maybe [[Int]]
+-- getSubPretermCodes m n
+--     | m == n = Just [[]]
+--     | otherwise = case m of
+--         V _ -> Just []
+--         L _ p -> do
+--             ps <- getSubPretermCodes p n
+--             return [0:ys | ys <- ps]
+--         A p q -> do
+--             ps <- getSubPretermCodes p n
+--             qs <- getSubPretermCodes q n
+--             return $ [1:ys | ys <- ps] ++ [2:ys | ys <- qs]
 
 
 --Variables bound above a position-subterm. Non-inclusive! so we do not count the variables the position-term itself binds.
@@ -147,7 +159,7 @@ boundVarsAbove _ _ = Nothing
 
 checkSubstForIllDefined :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Bool
 checkSubstForIllDefined m m' n = case getSubPretermCodes m m' of
-    Just [xs] -> case boundVarsAbove m xs of
+    [xs] -> case boundVarsAbove m xs of --  Just [xs] for old version of codes
         Just vars -> any (\y -> y `elem` freePreVars n) vars
         Nothing    -> False
     _ -> False
@@ -155,27 +167,29 @@ checkSubstForIllDefined m m' n = case getSubPretermCodes m m' of
 
 
 -- replace in m at a position for a sub-term n
-replaceSubtermAt :: LambdaPreTerm -> [Int] -> LambdaPreTerm -> Maybe LambdaPreTerm
-replaceSubtermAt _ [] n = Just n
-replaceSubtermAt (L x m') (0:xs) n = do
-    p <- replaceSubtermAt m' xs n
+replaceSubPretermAt :: LambdaPreTerm -> [Int] -> LambdaPreTerm -> Maybe LambdaPreTerm
+replaceSubPretermAt _ [] n = Just n
+replaceSubPretermAt (L x m') (0:xs) n = do
+    p <- replaceSubPretermAt m' xs n
     return (L x p)
-replaceSubtermAt (A p q) (1:xs) n = do
-    p' <- replaceSubtermAt p xs n
+replaceSubPretermAt (A p q) (1:xs) n = do
+    p' <- replaceSubPretermAt p xs n
     return (A p' q)
-replaceSubtermAt (A p q) (2:xs) n = do
-    q' <- replaceSubtermAt q xs n
+replaceSubPretermAt (A p q) (2:xs) n = do
+    q' <- replaceSubPretermAt q xs n
     return (A p q')
-replaceSubtermAt _ _ _ = Nothing
+replaceSubPretermAt _ _ _ = Nothing
 
 
 
 substForPreTerm :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm -> Maybe LambdaPreTerm
 substForPreTerm m m' n
     | checkSubstForIllDefined m m' n = Nothing
-    | otherwise = do
-        ps <- getSubPretermCodes m m'
-        replaceSubtermAt m (head ps) n
+    | otherwise = replaceSubPretermAt m (head ps) n
+        where ps = getSubPretermCodes m m'
+        -- do -- for the old version
+    --     ps <- getSubPretermCodes m m'
+    --     replaceSubPretermAt m (head ps) n
 
 
 -- old verion
@@ -261,7 +275,7 @@ alphaConvTot m x = case m of
 
 -- alpha convert m so as to make it compatible for substitution with n
 alphaConvFor :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
-alphaConvFor m n = alphaConvTot m (freshPreVar n)
+alphaConvFor m n = alphaConvTot m (freshPreVar2 m n)
 
 
 
@@ -314,12 +328,36 @@ substTerm (T m) x (T n) = case substPreTerm m x n of
 
 
 
+
+-- get a subterm of m from a button sequence
+getSubtermAt :: LambdaTerm -> [Int] -> Maybe LambdaTerm
+getSubtermAt (T m) xs =  do
+    m'<- getSubPretermAt m xs
+    return $ T m'
+
+
+-- get the codes for subterm n in m
+-- DOUBLE CHECK: Safe?
+getSubtermCodes :: LambdaTerm -> LambdaTerm -> [[Int]]
+getSubtermCodes m n
+    | m == n = [[]]
+    | otherwise = case m of
+        T (V _) -> []
+        T (L _ p) -> map (0:) (getSubtermCodes (T p) n)
+        T (A p q) -> map (1:) (getSubtermCodes (T p) n) ++ map (2:) (getSubtermCodes (T q) n)
+
+
+
 -- again substituting entire term, total with alpha-conversion
 substForTerm :: LambdaTerm -> LambdaTerm -> LambdaTerm -> LambdaTerm
-substForTerm (T m) (T m') (T n) = case substForPreTerm m m' n of
+substForTerm  (T m) (T m') (T n) = case substForPreTerm m m' n of
     Just t -> T t
-    _ -> substForTerm (T m) (T m'') (T n) 
-    where m'' = alphaConvFor m m''
+    _ -> substForTerm (T q) m'' (T n)
+    where
+        q = alphaConvFor m n
+        m'' = substTerm (T m') problemVariable (T $ V (freshPreVar2 m n))
+        problemVariable = 2 --
+
 
 
 ---------- MORE FUNCTIONS ----------

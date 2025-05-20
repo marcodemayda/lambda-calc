@@ -3,6 +3,8 @@ module Basics where
 import PreTerms
 import Untyped
 
+import Data.Maybe
+
 
 
 combiId :: LambdaTerm
@@ -34,22 +36,22 @@ bigTerm :: Int -> LambdaTerm
 bigTerm n = T$ foldl1 A (replicate n (preTer combiId) ++ [preTer combiId])
 
 myCheck :: Bool
-myCheck = checkNormalizingInf (bigTerm 100)
+myCheck = checkNormalizing (bigTerm 100)
 
 
 -- why slow now? especially when multi-reduction 100 is perfectly fast
 -- >>> myCheck
--- Maybe.fromJust: Nothing
+-- True
 
 myReduction :: LambdaTerm
 myReduction = betaMultiReductionL (bigTerm 100) 98
 
 -- >>> prettyPrint$ myReduction
--- Maybe.fromJust: Nothing
+-- "(\\1. 1)"
 
 
--- >>> completeDevelopInf (bigTerm 100)
--- Maybe.fromJust: Nothing
+-- >>> prettyPrint$ completeDevelop (bigTerm 100)
+-- "(\\1. 1)"
 
 
 
@@ -66,14 +68,16 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 -- T (L 3 (V 3))
 
 
+
 -- >>> betaReductionI twoRedex
--- Maybe.fromJust: Nothing
+-- T (A (L 3 (V 3)) (L 3 (V 3)))
 
 -- >>> betaReductionI $ betaReductionI twoRedex
--- Maybe.fromJust: Nothing
+-- T (L 3 (V 3))
 
 -- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
--- Maybe.fromJust: Nothing
+-- T (L 3 (V 3))
+
 
 
 -- >>> betaReductionPar twoRedex
@@ -88,22 +92,74 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 
 hiddenRed :: LambdaTerm
-hiddenRed =  T (A (L 1 (V 1)) (V 2)) 
+hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 -- >>>betaReductionL hiddenRed
 -- T (V 2)
 
 
 -- LOOPING combiY
+
+-- this takes way too long, it's either very inefficient or looping.
+
+-- takes way too long, clearly something is wrong. Might be looping
+mySubst :: LambdaTerm
+mySubst = substForTerm combiY (fromJust $ leftmostRedex combiY) (fromJust $ contractRedex $ fromJust $ leftmostRedex combiY)
+
+
+myPreSubst :: Maybe LambdaPreTerm
+myPreSubst = substForPreTerm myalconv (preTer $ fromJust $ leftmostRedex combiY) (preTer $ fromJust $ contractRedex $ fromJust $ leftmostRedex combiY)
+-- >>> myPreSubst
+-- Prelude.head: empty list
+
+
+
+myalconv :: LambdaPreTerm
+myalconv = alphaConvFor (preTer combiY) (preTer $ fromJust $ contractRedex $ fromJust $ leftmostRedex combiY)
+-- >>> myalconv
+-- L 2 (A (L 1 (A (V 2) (A (V 1) (V 1)))) (L 1 (A (V 2) (A (V 1) (V 1)))))
+-- >>> preTer combiY
+-- L 7 (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1)))))
+
+
+
+check = checkSubstForIllDefined (myalconv) (preTer $ fromJust $ leftmostRedex combiY) (preTer $ fromJust $ contractRedex $ fromJust $ leftmostRedex combiY)
+-- >>> check
+-- False
+
+subtermcode :: [[Int]]
+subtermcode = getSubtermCodes (T myalconv)  (fromJust $ leftmostRedex combiY)
+-- >>>subtermcode
+-- []
+
+leftredex :: Maybe LambdaTerm
+leftredex = leftmostRedex combiY
+-- >>> leftredex
+-- Just (T (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))))))
+
+subterm :: Bool
+subterm = fromJust leftredex `elem` subTerms (T myalconv)
+-- >>> subterm
+-- False
+
+-- that's the problem. Once we alpha convert, we lose sub-PreTerm condition. Must re-do things for terms so that we have alpha equivalence equality.
+
+
+code :: [[Int]]
+code = getSubtermCodes (T (L 1 (A (V 1) (L 2 (V 2))))) (T (L 3 (V 3)))
+-- >>> code
+-- [[0,2]]
+
+
 -- >>> prettyPrint$ combiY
 -- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
 
-
 -- >>> prettyPrint $ betaReductionL $ combiY
--- Maybe.fromJust: Nothing
+-- Prelude.head: empty list
+
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ combiY
--- Maybe.fromJust: Nothing
+-- Prelude.head: empty list
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
 -- Maybe.fromJust: Nothing
