@@ -4,10 +4,7 @@
 module PreTerms where
 
 
-import Data.Maybe
 import Data.List
-
--- import MissingH Data.List.Utils
 
 
 ---------- PRE TERMS ----------
@@ -49,9 +46,8 @@ lambdaVec xs m = foldr L m xs
 
 
 -------------- SUBSTITUTIONS -------------------------
-cartProd :: [a] -> [b] -> [(a, b)]
-cartProd xs ys = [(x,y) | x <- xs, y <- ys]
 
+-- check if the pre term is an abstraction with a variable
 isAbsWith :: LambdaPreTerm -> Var -> Bool
 isAbsWith m y = case m of
     L z _
@@ -82,8 +78,6 @@ substPreTerm m x n
                 return $ L y p'
 
 
-countElem :: Eq a => a -> [a] -> Int
-countElem i = length . filter (i==)
 
 
 {-
@@ -113,10 +107,6 @@ syntaxTreeButtons m x = case m of
         2 -> Just q
         _ -> Nothing
     _ -> Nothing
-
-
-myPreTerm :: LambdaPreTerm
-myPreTerm = A (A (L 1 (V 1)) (L 2 (V 1))) (L 3 (V 1))
 
 
 -- get a subterm of m from a button sequence
@@ -315,19 +305,24 @@ freshVar m = head $ variables \\ variablesOf m
 
 
 -- again read "Term with Var substituted for Term"
+-- Made total by alpha conversions
 substTerm :: LambdaTerm -> Var -> LambdaTerm -> LambdaTerm
 substTerm (T m) x (T n) = case substPreTerm m x n of
     Just t -> T t
     _ -> substTerm (T m') x (T n)
     where m' = alphaConvTot m (freshVar (T n))
 
-    -- t <- substPreTerm m x n
-    -- return $ T t
+
+
+-- again substituting entire term, total with alpha-conversion
+substForTerm :: LambdaTerm -> LambdaTerm -> LambdaTerm -> LambdaTerm
+substForTerm (T m) (T m') (T n) = case substForPreTerm m m' n of
+    Just t -> T t
+    _ -> substForTerm (T m) (T m'') (T n) 
+    where m'' = alphaConvFor m m''
 
 
 ---------- MORE FUNCTIONS ----------
-
-
 -- check if a term is a combinator, i.e. closed
 checkCombinator :: LambdaTerm -> Bool
 checkCombinator (T m) = null (freePreVars m)
@@ -391,3 +386,22 @@ prettyPrint (T m) = prettyPrePrint m
 
 prettierPrint :: LambdaTerm -> IO ()
 prettierPrint = putStrLn . prettyPrint
+
+
+
+
+
+
+
+
+
+
+
+--------- random helper functions that don't fit----------------------
+
+countElem :: Eq a => a -> [a] -> Int
+countElem i = length . filter (i==)
+
+
+cartProd :: [a] -> [b] -> [(a, b)]
+cartProd xs ys = [(x,y) | x <- xs, y <- ys]
