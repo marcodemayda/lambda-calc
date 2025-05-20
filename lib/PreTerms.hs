@@ -5,6 +5,7 @@ module PreTerms where
 
 
 import Data.List
+import Data.Maybe (fromJust)
 
 
 ---------- PRE TERMS ----------
@@ -356,7 +357,7 @@ substForTerm  (T m) (T m') (T n) = case substForPreTerm m m' n of
     where
         q = alphaConvFor m n
         m'' = substTerm (T m') problemVariable (T $ V (freshPreVar2 m n))
-        problemVariable = 2 --
+        problemVariable = head $ fromJust $ boundVarsAbove m (head $ getSubtermCodes (T m) (T m')) -- SUPER DOUBLE CHECK. threw this together while tired
 
 
 

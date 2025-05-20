@@ -70,10 +70,10 @@ twoRedex = T $ A (L 1 (V 1)) (A (L 2 (A (V 2) (V 2))) (L 3 (V 3)))
 
 
 -- >>> betaReductionI twoRedex
--- T (A (L 3 (V 3)) (L 3 (V 3)))
+-- T (A (L 1 (V 1)) (A (L 3 (V 3)) (L 3 (V 3))))
 
 -- >>> betaReductionI $ betaReductionI twoRedex
--- T (L 3 (V 3))
+-- T (A (L 1 (V 1)) (L 3 (V 3)))
 
 -- >>> betaReductionI $ betaReductionI $ betaReductionI twoRedex
 -- T (L 3 (V 3))
@@ -142,7 +142,8 @@ subterm = fromJust leftredex `elem` subTerms (T myalconv)
 -- >>> subterm
 -- False
 
--- that's the problem. Once we alpha convert, we lose sub-PreTerm condition. Must re-do things for terms so that we have alpha equivalence equality.
+-- that was the problem. Once we alpha convert, we lose sub-(Pre)Term condition. Must re-do things for terms so that we have alpha equivalence equality.
+-- I have now tentatively done it, seems to work but needs double-checking
 
 
 code :: [[Int]]
@@ -151,24 +152,25 @@ code = getSubtermCodes (T (L 1 (A (V 1) (L 2 (V 2))))) (T (L 3 (V 3)))
 -- [[0,2]]
 
 
+
 -- >>> prettyPrint$ combiY
 -- "(\\7. ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))"
 
 -- >>> prettyPrint $ betaReductionL $ combiY
--- Prelude.head: empty list
+-- "(\\2. (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))"
 
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ combiY
--- Prelude.head: empty list
+-- "(\\2. (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- Maybe.fromJust: Nothing
+-- "(\\2. (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- Maybe.fromJust: Nothing
+-- "(\\2. (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1)))))))))"
 
 -- >>> prettyPrint $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ betaReductionL $ combiY
--- Maybe.fromJust: Nothing
+-- "(\\2. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
 
 
 parallelTest :: LambdaTerm
@@ -183,10 +185,10 @@ Left-most should take 3, whilst the gap can be closed back to 2 with parallel re
 
 
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 1)
--- Maybe.fromJust: Nothing
+-- "((\\1. (1 1)) (\\1. 1))"
 
 -- >>> prettyPrint $ (betaMultiReductionI parallelTest 2)
--- Maybe.fromJust: Nothing
+-- "((\\1. 1) (\\1. 1))"
 
 
 
@@ -194,10 +196,10 @@ Left-most should take 3, whilst the gap can be closed back to 2 with parallel re
 -- "(((\\1. 1) (\\1. 1)) ((\\1. 1) (\\1. 1)))"
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 2)
--- Maybe.fromJust: Nothing
+-- "((\\1. 1) ((\\1. 1) (\\1. 1)))"
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 3)
--- Maybe.fromJust: Nothing
+-- "((\\1. 1) (\\1. 1))"
 
 
 -- >>> prettyPrint $ (betaMultiReductionL parallelTest 1)
