@@ -3,9 +3,8 @@
 {-# HLINT ignore "Avoid lambda" #-}
 module SimplyTypedChurch where
 
+
 import PreTerms
-import Untyped
-import Basics
 import SimplyTypedCurry
 
 
@@ -45,38 +44,42 @@ substRaw (RL y m) x n
 type JudgmentCh = (Context, (RawTerm, ArType))
 
 inferChurchVAR :: JudgmentCh -> Bool
-inferChurchVAR (ga, (ra, t)) = any (\(x,y) -> (R x,y) == (ra,t)) ga
+inferChurchVAR (ga, (ra, t)) 
+    | checkWellDefContext ga = any (\(x,y) -> (R x,y) == (ra,t)) ga
+    | otherwise = error "context is not well defined"
 
 inferChurchABS :: JudgmentCh -> JudgmentCh -> Bool
-inferChurchABS (ga1, (la1,t1)) (ga2, (la2,t2)) = case la2 of
-    (RL x m) ->  case t2 of
-        si `To` ta -> snd x == si
+inferChurchABS (ga1, (la1,t1)) (ga2, (la2,t2)) 
+    | checkWellDefContext ga1 && checkWellDefContext ga2 = 
+        case la2 of
+            (RL x m) ->  case t2 of
+                si `To` ta -> snd x == si
                             && t1 == ta
                             && ga2 == ga1 \\ [(fst x, si)]
                             && la1 == m
-        _ -> False
-    _ -> False
-
+                _ -> False
+            _ -> False
+    | otherwise = error "context is not well defined"
 
 inferChurchAPP :: JudgmentCh -> JudgmentCh -> JudgmentCh ->  Bool
-inferChurchAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) =
-    case t1 of
-        ta `To` si -> ga1 == ga2 && ga2 == ga3
-                    && la3 ==  RA la1 la2
-                    && t2 == si && t3 == ta
-        _ -> False
-
-
+inferChurchAPP (ga1, (la1, t1)) (ga2, (la2,t2)) (ga3, (la3, t3)) 
+    | checkWellDefContext ga1 && checkWellDefContext ga2 && checkWellDefContext ga3 =
+        case t1 of
+            ta `To` si ->  ga1 == ga2 && ga2 == ga3
+                        && la3 ==  RA la1 la2
+                        && t2 == si && t3 == ta
+            _ -> False
+    | otherwise = error "context is not well defined"
 
 
 
 ---- OTHER FUNCTIONS --------
 
 churchToPre :: RawTerm -> LambdaPreTerm
-churchToPre (R x) = (V x)
+churchToPre (R x) = V x
 churchToPre (RA m n) = A (churchToPre m) (churchToPre n)
 churchToPre (RL x m) = L (fst x) (churchToPre m)
 
 
-churchToCurry :: RawTerm -> LambdaTerm
-churchToCurry = T . churchToPre
+churchToTerm:: RawTerm -> LambdaTerm
+churchToTerm = T . churchToPre

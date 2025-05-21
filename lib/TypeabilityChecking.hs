@@ -9,6 +9,7 @@ import PreTerms
 import Untyped
 import Basics
 import SimplyTypedCurry
+import Data.Maybe (fromJust)
 
 -- this might be out of my wheelhouse tbh; depending how far i wanna go with it.
 
@@ -60,11 +61,11 @@ auxiliarVars (L _ m) (ta `To` si) = undefined
 equationSysteM :: LambdaTerm -> [ArType]
 equationSysteM (T (V _)) = []
 equationSysteM (T (A p q)) = equationSysteM (T p) ++ equationSysteM (T q) ++ [typeSysteM (T q) `To` typeSysteM (T (A p q))]
-equationSysteM (T (L x m)) = equationSysteM $ T (substPreTot m x (V (freshPreVar m)))
+equationSysteM (T (L x m)) = equationSysteM $ T $ fromJust $ substPreTerm m x (V (freshPreVar m))
 
 typeSysteM :: LambdaTerm -> ArType
 typeSysteM (T (V x)) = Ty x
 typeSysteM (T (A m n)) = Ty (freshPreVar (A m n))
-typeSysteM (T (L x m)) = Ty (freshPreVar m) `To` typeSysteM (T $ substPreTot m x (V (freshPreVar m)))
+typeSysteM (T (L x m)) = Ty (freshPreVar m) `To` typeSysteM (T $ fromJust $ substPreTerm m x (V (freshPreVar m)))
 
 
