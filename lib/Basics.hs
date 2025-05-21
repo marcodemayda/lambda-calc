@@ -34,8 +34,6 @@ combiY = T$ L 7 (A (L 1 (A (V 7) (A (V 1) (V 1)))) (L 1 (A (V 7) (A (V 1) (V 1))
 -- ENCODING FUNCTIONS
 --------------------
 
-
-
 verum :: LambdaTerm
 verum = T $ L 1 (L 2 (V 1))
 
@@ -69,22 +67,59 @@ repeatApplication ::  LambdaPreTerm -> LambdaPreTerm -> Integer -> LambdaPreTerm
 repeatApplication m n 0 = A m n
 repeatApplication m n x = A m (repeatApplication m n (x-1))
 
-churchNumeral :: Integer -> LambdaTerm
-churchNumeral 0 = T$ L 0 $ L 1 (V 1)
-churchNumeral n = T$ L 0 $ L 1 (repeatApplication (V 7) (V 1) (n-1))
 
 
--- suc :: LambdaPreTerm
--- suc = L 4 $ L 7 $ L 1 (A (V 7) (A (V 4) (A (V 7) (V 1))))
+churchNumeralTo :: Integer -> LambdaTerm
+churchNumeralTo 0 = T$ L 0 $ L 1 (V 1)
+churchNumeralTo n = T$ L 0 $ L 1 (repeatApplication (V 0) (V 1) (n-1))
 
--- succApp :: LambdaPreTerm -> LambdaPreTerm
--- succApp = A suc
 
--- add :: LambdaPreTerm
--- add = L 4 $ L 5 $ L 7 $ L 1 (A (V 5) (A (V 7) (A (V 4) (A (V 7) (V 1)))))
+isChurchNumeral :: LambdaTerm -> Bool
+isChurchNumeral (T (L f (L x m))) = checkBody m
+  where
+    checkBody (V y) = y == x
+    checkBody (A p q) = p == V f && checkBody q
+    checkBody _ = False
+isChurchNumeral _ = False
 
--- addApp :: LambdaPreTerm -> LambdaPreTerm -> LambdaPreTerm
--- addApp m n = A add (A m n)
+countVar :: Var -> LambdaTerm -> Integer
+countVar x (T (V y))
+    | x == y = 1
+    | otherwise = 0
+countVar x (T (A m n)) = countVar x (T m) + countVar x (T n)
+countVar x (T (L y m))
+    | x == y = 0  -- shadowed
+    | otherwise = countVar x (T m)
+
+
+churchNumeralFrom :: LambdaTerm -> Maybe Integer
+churchNumeralFrom m
+    | isChurchNumeral m = case m of
+        T (L x (L _ n)) -> Just $ countVar x (T n)
+        _ -> Nothing -- impossible case, covered by isChurchNumeral
+    | otherwise = Nothing
+
+
+suc :: LambdaTerm
+suc = T$ L 4 $ L 7 $ L 1 (A (V 7) (A (V 4) (A (V 7) (V 1))))
+
+succApp :: LambdaTerm -> LambdaTerm
+succApp m = T $ A (preTer suc) (preTer m) -- bit ugly to have to pre-term...
+
+add :: LambdaTerm
+add = T $ L 4 $ L 5 $ L 7 $ L 1 (A (V 5) (A (V 7) (A (V 4) (A (V 7) (V 1)))))
+
+addApp :: LambdaTerm -> LambdaTerm -> LambdaTerm
+addApp (T m) (T n) = T $ A (preTer add) (A m n) -- again, bit ugly
+
+-- >>> churchNumeralTo 5
+-- T (L 0 (L 1 (A (V 0) (A (V 0) (A (V 0) (A (V 0) (A (V 0) (V 1))))))))
+
+-- >>> churchNumeralFrom (T (L 0 (L 1 (A (V 0) (A (V 0) (A (V 0) (A (V 0) (A (V 0) (V 1)))))))))
+-- Just 5
+
+
+
 
 --------------------
 -- TESTS
@@ -153,10 +188,9 @@ hiddenRed =  T (A (L 1 (V 1)) (V 2))
 
 -- >>> prettyPrint $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ betaReductionR $ combiY
 -- "(\\7. (7 (7 (7 (7 (7 ((\\1. (7 (1 1))) (\\1. (7 (1 1))))))))))"
---LETS FUCKING GO!!
 
 
 --------------
--- >>> prettyPrint $ churchNumeral 5
--- "(\\7. (\\1. (7 (7 (7 (7 (7 1)))))))"
+-- >>> prettyPrint $ churchNumeralTo 5
+-- "(\\0. (\\1. (7 (7 (7 (7 (7 1)))))))"
 
